@@ -2,11 +2,3 @@
 name = "aurus-robotics"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-anyhow = "1.0.95"
-automerge = "0.5.12"
-futures = "0.3.31"
-serde = "1.0.217"
-serde_json = "1.0.135"
-tokio = "1.43.0"
