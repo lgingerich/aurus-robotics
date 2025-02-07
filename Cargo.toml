@@ -6,6 +6,8 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-anyhow = "1.0.95"
-embedded-hal = "1.0.0"
-tracing = "0.1.41"
+anyhow = "1.0"
+embedded-hal = "1.0"
+serde = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
