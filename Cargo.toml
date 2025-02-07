@@ -1,4 +1,11 @@
-[package]
-name = "aurus-robotics"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [
+    "aurus",
+    "hal_core"
+]
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0.95"
+embedded-hal = "1.0.0"
+tracing = "0.1.41"
