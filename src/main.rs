@@ -1,32 +1,24 @@
-#![no_main]
 #![no_std]
+#![no_main]
 
-use cortex_m_rt::entry;
-use panic_halt as _;
-use stm32f4xx_hal as hal;
+use defmt::*;
+use embassy_executor::Spawner;
+use embassy_stm32::gpio::{Level, Output, Speed};
+use embassy_time::Timer;
+use {defmt_rtt as _, panic_probe as _};
 
-use crate::hal::{pac, prelude::*};
+#[embassy_executor::main]
+async fn main(_spawner: Spawner) {
+    let p = embassy_stm32::init(Default::default());
+    let mut led = Output::new(p.PC13, Level::Low, Speed::Low);
 
-#[entry]
-fn main() -> ! {
-    let dp = pac::Peripherals::take().unwrap();
-    let rcc = dp.RCC.constrain();
-    let clocks = rcc.cfgr.freeze();
-    let gpioc = dp.GPIOC.split();
-    let mut led = gpioc.pc13.into_push_pull_output();
-
-    for _ in 0..10 {
-        // Turn LED on
-        led.set_low();
-        cortex_m::asm::delay(2_000_000);
-        // Turn LED off
-        led.set_high();
-        cortex_m::asm::delay(2_000_000);
-    }
-
-    // After blinking, enter an infinite loop doing nothing
     loop {
-        led.set_high();  // Keep LED off after blinking
-        cortex_m::asm::delay(2_000_000);
+        info!("led on!");
+        led.set_high();
+        Timer::after_secs(1).await;
+        
+        info!("led off!");
+        led.set_low();
+        Timer::after_secs(1).await;
     }
 }
