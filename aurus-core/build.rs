@@ -9,13 +9,10 @@ struct Config {
 #[derive(Deserialize)]
 struct Hardware {
     chip: String,
-    led_pin: String,
 }
 
 fn main() {
-    println!("cargo:rustc-check-cfg=cfg(led_pin,values(\"PC13\"))");
     println!("cargo:rustc-link-arg-bins=--nmagic");
-    // println!("cargo:rustc-link-arg-bins=-Tmemory.x");
     println!("cargo:rustc-link-arg-bins=-Tlink.x");
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
 
@@ -25,6 +22,5 @@ fn main() {
 
     // Set the configurations
     println!("cargo:rustc-cfg=chip=\"{}\"", config.hardware.chip);
-    println!("cargo:rustc-cfg=led_pin=\"{}\"", config.hardware.led_pin);
     println!("cargo:rerun-if-changed=../board.toml");
 }
