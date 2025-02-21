@@ -1,0 +1,3 @@
+[hardware]
+chip = "stm32f411ce"
+led_pin = "PC13"

@@ -1,5 +1,5 @@
 [package]
-name = "aurus-robotics"
+name = "aurus-core"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,9 +15,15 @@ panic-halt = "1.0"
 
 ## Embassy
 embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "task-arena-size-32768"] }
-embassy-stm32 = { version = "0.2.0", features = ["stm32f411ce", "defmt", "time-driver-tim3"] }
+embassy-stm32 = { version = "0.2.0", features = ["stm32f411ce", "defmt", "memory-x", "time-driver-tim3"] }
 embassy-time = { version = "0.4.0" }
 
-[profile.release]
-opt-level = "s"
-lto = true
+## Libraries
+stm32 = { path = "../stm32" }
+
+
+
+[build-dependencies]
+toml = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_derive = "1.0"
