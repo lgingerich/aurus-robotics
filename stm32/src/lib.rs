@@ -1,6 +1,11 @@
 #![no_std]
 
 use embassy_stm32::gpio::{Output, Level, Speed, Pin};
+use embassy_stm32::Peripherals;
+
+pub fn init_peripherals() -> Peripherals {
+    embassy_stm32::init(Default::default())
+}
 
 pub struct LedDriver {
     pub led: Output<'static>,
