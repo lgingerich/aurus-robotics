@@ -3,8 +3,11 @@
 /// This trait provides essential motor control operations like starting,
 /// stopping, and direction control.
 pub trait MotorDriver {
+    /// Configuration type for creating a new motor driver
+    type Config: 'static;  // Ensure static lifetime
+
     /// Creates a new instance of the motor driver.
-    fn new() -> Self;
+    fn new(config: Self::Config) -> Self;
 
     /// Starts the motor.
     fn start(&mut self);
