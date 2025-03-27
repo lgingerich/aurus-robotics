@@ -12,16 +12,20 @@ pub struct PwmMotorDriver {
 }
 
 impl MotorDriver for PwmMotorDriver {
-    type Config = ( // TODO: This doesn't feel right to have TIM1 and PA8. 
+    // TODO: This doesn't feel right to have TIM1 and PA8. 
+    // TIM1_CH1 = PA8
+    // Is it mandatory that I set the timer and pwm on the same pins?
+    type Config = (
         TIM1,
         PA8, // PWM pin (Channel 1 for TIM1)
         AnyPin, // Direction pin
-        Hertz
+        u32
     );
 
     /// Create a new PwmMotorDriver
     fn new(config: Self::Config) -> Self {
         let (timer, pwm_pin, dir_pin, freq) = config;
+        let freq = Hertz::hz(freq);
 
         // Create PWM pin first
         let ch1_pin = PwmPin::new_ch1(pwm_pin, OutputType::PushPull);
@@ -102,6 +106,7 @@ impl SpeedControl for PwmMotorDriver {
 
 /// Convert the raw duty cycle value to a percentage (0-100)
 fn duty_cycle_to_percent(current: u16, max: u16) -> u8 {
+    assert!(current <= max, "Current duty cycle cannot exceed max duty cycle");
     let percent = (current as u32 * 100u32) / max as u32;
     percent as u8 // percent cannot exceed 100 (i.e. valid u8)
 }

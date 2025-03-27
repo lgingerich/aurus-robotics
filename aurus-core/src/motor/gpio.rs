@@ -19,21 +19,20 @@ impl MotorDriver for GpioMotorDriver {
         Self { enable, dir }
     }
 
-    // NOTE: Do I want this to always start at High?
     /// Start the motor
     fn start(&mut self) {
-        self.enable.set_level(Level::High);
+        self.enable.set_high();
     }
 
     /// Stop the motor
     fn stop(&mut self) {
-        self.enable.set_level(Level::Low);
+        self.enable.set_low();
     }
 
     /// Cleanup the motor driver
     fn cleanup(&mut self) {
         if self.enable.is_set_high() {
-            self.enable.set_level(Level::Low);
+            self.enable.set_low();
         }
     }
 
