@@ -1,4 +1,4 @@
-use crate::motor::traits::MotorDriver;
+use crate::motor::traits::{MotorDriver, MotorDriverState};
 use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
 
 pub struct GpioMotorDriver {
@@ -7,7 +7,7 @@ pub struct GpioMotorDriver {
 }
 
 impl MotorDriver for GpioMotorDriver {
-    type Config = (AnyPin, AnyPin);
+    type Config = (AnyPin, AnyPin); // NOTE: Not sure I want to use AnyPin here.
 
     /// Create a new GpioMotorDriver
     fn new(config: Self::Config) -> Self {
@@ -30,8 +30,27 @@ impl MotorDriver for GpioMotorDriver {
         self.enable.set_level(Level::Low);
     }
 
+    /// Cleanup the motor driver
+    fn cleanup(&mut self) {
+        if self.enable.is_set_high() {
+            self.enable.set_level(Level::Low);
+        }
+    }
+
+    /// Get the current state of the motor driver
+    fn get_state(&mut self) -> MotorDriverState {
+        MotorDriverState {        
+            enabled: self.enable.is_set_high(),
+            direction: self.dir.is_set_high(),
+            speed: None, 
+            pwm_frequency: None, // TODO: Add frequency
+            duty_cycle: None,
+            max_duty_cycle: None,
+        }
+    }
+
     /// Check if the motor is running
-    fn is_running(&self) -> bool {
+    fn is_running(&mut self) -> bool {
         self.enable.is_set_high()
     }
 
