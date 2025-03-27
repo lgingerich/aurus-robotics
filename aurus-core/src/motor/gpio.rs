@@ -1,5 +1,5 @@
 use crate::motor::traits::MotorDriver;
-use embassy_stm32::gpio::{Output, Level, Speed};
+use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
 
 pub struct GpioMotorDriver {
     enable: Output<'static>,
@@ -8,15 +8,15 @@ pub struct GpioMotorDriver {
 
 impl MotorDriver for GpioMotorDriver {
     type Config = (
-        embassy_stm32::gpio::AnyPin,
-        embassy_stm32::gpio::AnyPin,
+        AnyPin,
+        AnyPin,
     );
 
     /// Create a new GpioMotorDriver
     fn new(config: Self::Config) -> Self {
         let (enable_pin, dir_pin) = config;
         // Initialize with motor stopped and forward direction
-        let enable = Output::new(enable_pin, Level::Low, Speed::Low);
+        let enable = Output::new(enable_pin, Level::Low, Speed::Low); // NOTE: On the motor driver board, the pins are named "DIR" and "PWM". Should I just call this "pwm" instead of "enable"?
         let dir = Output::new(dir_pin, Level::High, Speed::Low);
 
         Self { enable, dir }
