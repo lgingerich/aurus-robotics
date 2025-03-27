@@ -3,6 +3,9 @@ name = "aurus-core"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+harness = false
+
 [dependencies]
 cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
 cortex-m-rt = "0.7"
@@ -17,13 +20,15 @@ panic-halt = "1.0"
 embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "task-arena-size-32768"] }
 embassy-stm32 = { version = "0.2.0", features = ["stm32f411ce", "defmt", "memory-x", "time-driver-tim3"] }
 embassy-time = { version = "0.4.0" }
+defmt-test = "0.3.3"
 
-## Libraries
-stm32 = { path = "../stm32" }
-
-
+[dev-dependencies]
+defmt-test = "0.3.3"
 
 [build-dependencies]
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
+
+[features]
+test = []
