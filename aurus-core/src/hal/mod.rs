@@ -13,10 +13,10 @@ use embassy_stm32::Peripherals;
 pub fn init() -> Peripherals {
     #[cfg(feature = "stm32")]
     return stm32::init_peripherals();
-    
+
     // #[cfg(feature = "esp32")]
     // return esp32::init_peripherals();
-    
+
     // #[cfg(feature = "rpi")]
     // return rpi::init_peripherals();
 }

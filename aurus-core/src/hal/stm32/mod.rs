@@ -1,6 +1,6 @@
 #![no_std]
 
-use embassy_stm32::gpio::{Output, Level, Speed, Pin};
+use embassy_stm32::gpio::{Level, Output, Pin, Speed};
 use embassy_stm32::Peripherals;
 
 pub fn init_peripherals() -> Peripherals {
@@ -14,10 +14,10 @@ pub fn init_peripherals() -> Peripherals {
 // pub trait Gpio {
 //     /// Create a new GPIO output pin
 //     fn new<P: Pin>(pin: P, level: Level, speed: Speed) -> Self;
-    
+
 //     /// Set the output level of the pin
 //     fn set_level(&mut self, level: Level);
-    
+
 //     /// Get the current output level of the pin
 //     fn get_level(&self) -> Level;
 
@@ -27,7 +27,7 @@ pub fn init_peripherals() -> Peripherals {
 
 // impl Gpio for GpioOutput {
 //     fn new<P: Pin>(pin: P, level: Level, speed: Speed) -> Self {
-//         Self { 
+//         Self {
 //             pin: Output::new(pin, level, speed)
 //         }
 //     }
@@ -50,5 +50,3 @@ pub fn init_peripherals() -> Peripherals {
 //     fn set_frequency {}
 //     fn set_direction {}
 // }
-
-

@@ -7,10 +7,7 @@ pub struct GpioMotorDriver {
 }
 
 impl MotorDriver for GpioMotorDriver {
-    type Config = (
-        AnyPin,
-        AnyPin,
-    );
+    type Config = (AnyPin, AnyPin);
 
     /// Create a new GpioMotorDriver
     fn new(config: Self::Config) -> Self {
@@ -21,7 +18,7 @@ impl MotorDriver for GpioMotorDriver {
 
         Self { enable, dir }
     }
-    
+
     // NOTE: Do I want this to always start at High?
     /// Start the motor
     fn start(&mut self) {

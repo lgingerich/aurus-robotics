@@ -23,7 +23,7 @@ async fn main(_spawner: Spawner) {
 
     // Create motor driver config
     let config = (p.PA0.into(), p.PA1.into());
-    
+
     // Create motor drivers
     let mut motor: GpioMotorDriver = MotorDriver::new(config);
     info!("Motor driver initialized");
