@@ -1,6 +1,11 @@
 use crate::motor::traits::{MotorDriver, MotorDriverState};
 use embassy_stm32::gpio::{AnyPin, Level, Output, Speed};
 
+#[cfg(test)]
+use defmt_rtt as _; // global logger
+#[cfg(test)]
+use panic_probe as _; // panic handler
+
 pub struct GpioMotorDriver {
     enable: Output<'static>,
     dir: Output<'static>,

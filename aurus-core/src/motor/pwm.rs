@@ -6,6 +6,11 @@ use embassy_stm32::{
     timer::simple_pwm::{PwmPin, SimplePwm},
 };
 
+#[cfg(test)]
+use defmt_rtt as _; // global logger
+#[cfg(test)]
+use panic_probe as _; // panic handler
+
 pub struct PwmMotorDriver {
     pwm: SimplePwm<'static, TIM1>,
     dir: Output<'static>,
@@ -105,7 +110,7 @@ impl SpeedControl for PwmMotorDriver {
 }
 
 /// Convert the raw duty cycle value to a percentage (0-100)
-fn duty_cycle_to_percent(current: u16, max: u16) -> u8 {
+pub fn duty_cycle_to_percent(current: u16, max: u16) -> u8 {
     assert!(current <= max, "Current duty cycle cannot exceed max duty cycle");
     let percent = (current as u32 * 100u32) / max as u32;
     percent as u8 // percent cannot exceed 100 (i.e. valid u8)
