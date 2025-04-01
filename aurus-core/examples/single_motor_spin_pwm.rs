@@ -1,8 +1,17 @@
 #![no_std]
 #![no_main]
 
-use aurus_core::motor::pwm::PwmMotorDriver;
-use aurus_core::motor::traits::{MotorDriver, SpeedControl};
+use aurus_core::{
+    motor::pwm::{PwmOutput, PwmConfig, PwmError},
+    motor::gpio::DigitalOutput,
+    motor::motor::Motor,
+};
+use embassy_stm32::{
+    timer::simple_pwm::{SimplePwm, PwmPin},
+    gpio::{Output, Level, Speed, OutputType},
+    peripherals::{TIM1, PA8, PA9},
+    time::Hertz,
+};
 
 use defmt::*;
 use embassy_executor::Spawner;
@@ -17,37 +26,47 @@ const MIN_SPEED: u8 = 0; // Minimum speed (0%)
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     // Print program start
-    info!("Starting PWM motor control program...");
+    info!("Starting capability-driven PWM motor control program...");
 
     // Initialize peripherals
     let p = embassy_stm32::init(Default::default());
     info!("Peripherals initialized");
 
-    // Create motor driver config
-    let config = (
+    // Configure PWM pin (PA8 - TIM1_CH1)
+    let pwm_pin = p.PA8;
+    let ch1_pin = PwmPin::new_ch1(pwm_pin, OutputType::PushPull);
+
+    // Configure direction pin (PA0)
+    let dir_pin: Output<'static> = Output::new(p.PA0, Level::Low, Speed::Low);
+
+    // Create PWM instance
+    let pwm = SimplePwm::new(
         p.TIM1,
-        p.PA8,
-        p.PA1.into(), // TODO: Should not have to call into() on what is supposed to be user facing code
-        PWM_FREQ,
+        Some(ch1_pin),
+        None,
+        None,
+        None,
+        Hertz::hz(PWM_FREQ),
+        Default::default()
     );
 
-    // Create motor driver
-    let mut motor: PwmMotorDriver = MotorDriver::new(config);
-    info!("Motor driver initialized");
+    // Create motor instance
+    let mut motor = Motor::<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>>::new(dir_pin, pwm, None);
+    info!("Motor initialized with PWM capabilities");
 
     info!("Entering main control loop");
     loop {
         // Forward direction with increasing speed
         info!("Setting direction: forward");
-        motor.set_direction(true);
-        motor.start();
+        motor.set_direction(true).unwrap();
+        motor.start().unwrap();
         
         for speed in (MIN_SPEED..=MAX_SPEED).step_by(20) {
             info!("Setting speed: {}%", speed);
-            motor.set_speed(speed);
+            motor.set_speed_percent(speed).unwrap();
             
             // Get and display current state
-            let state = motor.get_state();
+            let state = motor.get_state().unwrap();
             info!("Motor state: enabled={}, direction={}, duty_cycle={:?}, max_duty={:?}", 
                 state.enabled, state.direction, state.duty_cycle, state.max_duty_cycle);
             
@@ -56,20 +75,20 @@ async fn main(_spawner: Spawner) {
 
         // Stop and wait
         info!("Stopping motor");
-        motor.stop();
+        motor.stop().unwrap();
         Timer::after_millis(STEP_TIME_MS).await;
 
         // Reverse direction with decreasing speed
         info!("Setting direction: reverse");
-        motor.set_direction(false);
-        motor.start();
+        motor.set_direction(false).unwrap();
+        motor.start().unwrap();
         
         for speed in (MIN_SPEED..=MAX_SPEED).rev().step_by(20) {
             info!("Setting speed: {}%", speed);
-            motor.set_speed(speed);
+            motor.set_speed_percent(speed).unwrap();
             
             // Get and display current state
-            let state = motor.get_state();
+            let state = motor.get_state().unwrap();
             info!("Motor state: enabled={}, direction={}, duty_cycle={:?}, max_duty={:?}", 
                 state.enabled, state.direction, state.duty_cycle, state.max_duty_cycle);
             
@@ -78,7 +97,7 @@ async fn main(_spawner: Spawner) {
 
         // Stop and wait
         info!("Stopping motor");
-        motor.stop();
+        motor.stop().unwrap();
         Timer::after_millis(STEP_TIME_MS).await;
     }
-}
+} 
