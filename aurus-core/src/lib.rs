@@ -1,12 +1,14 @@
 #![no_std]
 #![no_main]
 
-pub mod motor;
+pub mod devices;
+pub mod hardware;
+pub mod traits;
 
 #[cfg(test)]
 #[defmt_test::tests]
 mod hardware_tests {
-    use crate::motor::pwm::duty_cycle_to_percent; // Import the helper function
+    use crate::hardware::pwm::duty_cycle_to_percent; // Import the helper function
     use embassy_stm32::gpio::Level;
 
     // --- Mock Implementations ---

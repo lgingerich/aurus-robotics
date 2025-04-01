@@ -1,6 +1,6 @@
-use crate::motor::gpio::{DigitalOutput, GpioError};
-use crate::motor::pwm::{PwmError, PwmOutput};
-use crate::motor::traits::{MotorControl, SpeedControl, MotorState};
+use crate::hardware::gpio::{DigitalOutput, GpioError};
+use crate::hardware::pwm::{PwmError, PwmOutput};
+use crate::traits::motor::{MotorControl, SpeedControl, MotorState};
 use core::convert::Infallible;
 
 #[derive(Debug)]
