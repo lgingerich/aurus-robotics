@@ -2,9 +2,8 @@
 #![no_main]
 
 use aurus_core::{
-    motor::gpio::DigitalOutput,
-    motor::motor::Motor,
-    motor::pwm::{PwmConfig, PwmError, PwmOutput},
+    devices::motor::Motor,
+    traits::motor::{MotorControl, SpeedControl},
 };
 use embassy_stm32::{
     gpio::{Level, Output, OutputType, Speed},
@@ -52,7 +51,7 @@ async fn main(_spawner: Spawner) {
 
     // Create motor instance
     let mut motor = Motor::<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>>::new(
-        dir_pin, pwm, None,
+        dir_pin, Some(pwm), None,
     );
     info!("Motor initialized with PWM capabilities");
 

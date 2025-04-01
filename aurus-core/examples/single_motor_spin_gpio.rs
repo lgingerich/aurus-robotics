@@ -1,11 +1,11 @@
 #![no_std]
 #![no_main]
 
-use aurus_core::{motor::gpio::DigitalOutput, motor::motor::Motor};
-use embassy_stm32::{
-    gpio::{Level, Output, OutputType, Pull, Speed},
-    peripherals::{PA0, PA1},
+use aurus_core::{
+    devices::motor::Motor,
+    traits::motor::MotorControl,
 };
+use embassy_stm32::gpio::{Level, Output, Speed};
 
 use defmt::*;
 use embassy_executor::Spawner;
@@ -30,7 +30,7 @@ async fn main(_spawner: Spawner) {
     let enable_pin = Output::new(p.PA1, Level::Low, Speed::Low);
 
     // Create motor with our GPIO capabilities
-    let mut motor = Motor::new(direction_pin, (), Some(enable_pin));
+    let mut motor = Motor::new(direction_pin, None, Some(enable_pin));
     info!("Motor initialized with GPIO capabilities");
 
     info!("Entering main control loop");
