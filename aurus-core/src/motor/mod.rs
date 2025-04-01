@@ -1,3 +1,3 @@
 pub mod gpio;
-pub mod pwm;
 pub mod motor;
+pub mod pwm;

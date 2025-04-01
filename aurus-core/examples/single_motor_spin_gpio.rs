@@ -1,10 +1,7 @@
 #![no_std]
 #![no_main]
 
-use aurus_core::{
-    motor::gpio::DigitalOutput,
-    motor::motor::Motor,
-};
+use aurus_core::{motor::gpio::DigitalOutput, motor::motor::Motor};
 use embassy_stm32::{
     gpio::{Level, Output, OutputType, Pull, Speed},
     peripherals::{PA0, PA1},
@@ -28,17 +25,9 @@ async fn main(_spawner: Spawner) {
     info!("Peripherals initialized");
 
     // Configure GPIO pins
-    let direction_pin = Output::new(
-        p.PA0,
-        Level::Low,
-        Speed::Low,
-    );
-    
-    let enable_pin = Output::new(
-        p.PA1,
-        Level::Low,
-        Speed::Low,
-    );
+    let direction_pin = Output::new(p.PA0, Level::Low, Speed::Low);
+
+    let enable_pin = Output::new(p.PA1, Level::Low, Speed::Low);
 
     // Create motor with our GPIO capabilities
     let mut motor = Motor::new(direction_pin, (), Some(enable_pin));
@@ -68,4 +57,4 @@ async fn main(_spawner: Spawner) {
         motor.stop().unwrap();
         Timer::after_millis(OFF_TIME_MS).await;
     }
-} 
+}

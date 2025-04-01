@@ -2,15 +2,15 @@
 #![no_main]
 
 use aurus_core::{
-    motor::pwm::{PwmOutput, PwmConfig, PwmError},
     motor::gpio::DigitalOutput,
     motor::motor::Motor,
+    motor::pwm::{PwmConfig, PwmError, PwmOutput},
 };
 use embassy_stm32::{
-    timer::simple_pwm::{SimplePwm, PwmPin},
-    gpio::{Output, Level, Speed, OutputType},
-    peripherals::{TIM1, PA8, PA9},
+    gpio::{Level, Output, OutputType, Speed},
+    peripherals::{PA8, PA9, TIM1},
     time::Hertz,
+    timer::simple_pwm::{PwmPin, SimplePwm},
 };
 
 use defmt::*;
@@ -47,11 +47,13 @@ async fn main(_spawner: Spawner) {
         None,
         None,
         Hertz::hz(PWM_FREQ),
-        Default::default()
+        Default::default(),
     );
 
     // Create motor instance
-    let mut motor = Motor::<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>>::new(dir_pin, pwm, None);
+    let mut motor = Motor::<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>>::new(
+        dir_pin, pwm, None,
+    );
     info!("Motor initialized with PWM capabilities");
 
     info!("Entering main control loop");
@@ -60,16 +62,18 @@ async fn main(_spawner: Spawner) {
         info!("Setting direction: forward");
         motor.set_direction(true).unwrap();
         motor.start().unwrap();
-        
+
         for speed in (MIN_SPEED..=MAX_SPEED).step_by(20) {
             info!("Setting speed: {}%", speed);
             motor.set_speed_percent(speed).unwrap();
-            
+
             // Get and display current state
             let state = motor.get_state().unwrap();
-            info!("Motor state: enabled={}, direction={}, duty_cycle={:?}, max_duty={:?}", 
-                state.enabled, state.direction, state.duty_cycle, state.max_duty_cycle);
-            
+            info!(
+                "Motor state: enabled={}, direction={}, duty_cycle={:?}, max_duty={:?}",
+                state.enabled, state.direction, state.duty_cycle, state.max_duty_cycle
+            );
+
             Timer::after_millis(STEP_TIME_MS).await;
         }
 
@@ -82,16 +86,18 @@ async fn main(_spawner: Spawner) {
         info!("Setting direction: reverse");
         motor.set_direction(false).unwrap();
         motor.start().unwrap();
-        
+
         for speed in (MIN_SPEED..=MAX_SPEED).rev().step_by(20) {
             info!("Setting speed: {}%", speed);
             motor.set_speed_percent(speed).unwrap();
-            
+
             // Get and display current state
             let state = motor.get_state().unwrap();
-            info!("Motor state: enabled={}, direction={}, duty_cycle={:?}, max_duty={:?}", 
-                state.enabled, state.direction, state.duty_cycle, state.max_duty_cycle);
-            
+            info!(
+                "Motor state: enabled={}, direction={}, duty_cycle={:?}, max_duty={:?}",
+                state.enabled, state.direction, state.duty_cycle, state.max_duty_cycle
+            );
+
             Timer::after_millis(STEP_TIME_MS).await;
         }
 
@@ -100,4 +106,4 @@ async fn main(_spawner: Spawner) {
         motor.stop().unwrap();
         Timer::after_millis(STEP_TIME_MS).await;
     }
-} 
+}

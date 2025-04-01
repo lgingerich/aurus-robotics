@@ -1,5 +1,5 @@
 use crate::motor::gpio::{DigitalOutput, GpioError};
-use crate::motor::pwm::{PwmOutput, PwmError};
+use crate::motor::pwm::{PwmError, PwmOutput};
 use core::convert::Infallible;
 
 #[derive(Debug)]
@@ -109,7 +109,9 @@ where
             return Err(MotorError::InvalidState);
         }
 
-        self.speed_control.set_duty_cycle(duty_cycle).map_err(Into::into)?;
+        self.speed_control
+            .set_duty_cycle(duty_cycle)
+            .map_err(Into::into)?;
         self.current_duty = duty_cycle;
         Ok(())
     }
@@ -120,7 +122,9 @@ where
         }
 
         let percent = percent.min(100);
-        self.speed_control.set_duty_cycle_percent(percent).map_err(Into::into)?;
+        self.speed_control
+            .set_duty_cycle_percent(percent)
+            .map_err(Into::into)?;
 
         let max_duty = self.speed_control.max_duty_cycle().map_err(Into::into)?;
         self.current_duty = ((percent as u32 * max_duty as u32) / 100) as u16;
