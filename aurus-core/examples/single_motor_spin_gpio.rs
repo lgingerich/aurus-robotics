@@ -5,8 +5,11 @@ use aurus_core::{
     devices::motor::Motor,
     traits::motor::MotorControl,
 };
-use embassy_stm32::gpio::{Level, Output, Speed};
-
+use embassy_stm32::{
+    gpio::{Level, Output, Speed},
+    timer::simple_pwm::SimplePwm,
+    peripherals::TIM1,
+};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_time::Timer;
@@ -30,7 +33,7 @@ async fn main(_spawner: Spawner) {
     let enable_pin = Output::new(p.PA1, Level::Low, Speed::Low);
 
     // Create motor with our GPIO capabilities
-    let mut motor = Motor::new(direction_pin, None, Some(enable_pin));
+    let mut motor: Motor<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>> = Motor::new(direction_pin, None, Some(enable_pin));
     info!("Motor initialized with GPIO capabilities");
 
     info!("Entering main control loop");
