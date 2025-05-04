@@ -18,7 +18,7 @@ This repository contains the core firmware for Aurus, a robotics development fra
 
 3. Run an example:
 ```bash
-cd aurus-core
+cd aurus-motor
 cargo run --example single_motor_spin_gpio
 ```
 

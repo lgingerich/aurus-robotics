@@ -5,7 +5,7 @@ set -e
 echo "Building release version..."
 cargo build --release
 
-BINARY_PATH="target/thumbv7em-none-eabihf/release/aurus-core"
+BINARY_PATH="target/thumbv7em-none-eabihf/release/aurus-motor"
 
 # Check if binary exists and has size
 echo "Checking binary..."
