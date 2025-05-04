@@ -69,14 +69,6 @@ impl RobotState {
         }
     }
 
-    pub fn add_error(&mut self, error: BrainError) {
-        let error_string = error.to_string();
-        if self.active_errors.len() >= 10 {
-            self.active_errors.remove(0);
-        }
-        self.active_errors.push(error_string);
-    }
-
     pub fn clear_errors(&mut self) {
         self.active_errors.clear();
     }
@@ -95,19 +87,5 @@ impl StateManager {
 
     pub fn get_state(&self) -> RobotState {
         self.state.clone()
-    }
-
-
-    /// Acquires a write lock and allows modifying the state via a closure.
-    pub fn update_state<F>(&self, updater: F)
-    where
-        F: FnOnce(&mut RobotState),
-    {
-        match self.state.write() {
-            Ok(mut state_guard) => updater(&mut *state_guard),
-            Err(poisoned) => {
-                eprintln!("FATAL: State RwLock poisoned: {}", poisoned);
-            }
-        }
     }
 }

@@ -1,5 +1,5 @@
 use config::{Config, ConfigError, File, FileFormat};
-use tracing::{info, error, info_span};
+use tracing::{info, error};
 
 const DEFAULT_CONFIG_PATH: &str = "config/default.toml";
 
