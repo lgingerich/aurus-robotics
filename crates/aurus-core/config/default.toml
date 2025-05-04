@@ -1,0 +1,11 @@
+
+# Aurus Core Default Configuration
+
+[brain]
+event_channel_capacity = 100
+default_charge_level_target = 0.95 # Target battery level for Charge task
+
+[adapters]
+nav_replan_attempts = 3 # Example: How many times to replan if stuck
+
+# Add other sections...
