@@ -1,12 +1,12 @@
 use parking_lot::RwLock;
 use std::{sync::Arc, time::Instant};
 
-#[derive(Debug, Clone, Default)]
-pub struct Pose { pub x: f64, pub y: f64, pub th: f64 }
+use aurus_kinematics::{Pose, Twist};
 
 #[derive(Clone)]
 pub struct State {
     pub pose: Pose,
+    pub twist: Twist,
     pub battery_pct: u8,
     pub last_cmd_ts: Instant,
     pub faults: Vec<String>,
@@ -16,6 +16,7 @@ impl Default for State {
     fn default() -> Self {
         State {
             pose: Pose::default(),
+            twist: Twist::default(),
             battery_pct: 0,
             last_cmd_ts: Instant::now(),
             faults: Vec::new(),

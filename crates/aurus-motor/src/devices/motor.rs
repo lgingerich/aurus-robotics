@@ -1,6 +1,6 @@
 use crate::hardware::gpio::{DigitalOutput, GpioError};
 use crate::hardware::pwm::{PwmError, PwmOutput};
-use crate::traits::motor::{MotorControl, SpeedControl, MotorState};
+use crate::traits::motor::{MotorControl, MotorState, SpeedControl};
 use core::convert::Infallible;
 
 #[derive(Debug)]
@@ -113,12 +113,13 @@ where
     }
 
     fn get_state(&mut self) -> Result<Self::State, Self::Error> {
-        let max_duty = self.speed_control
+        let max_duty = self
+            .speed_control
             .as_mut()
             .map(|pwm| pwm.max_duty_cycle())
             .transpose()
             .map_err(Into::into)?;
-        
+
         let speed = if let Some(max_duty) = max_duty {
             if max_duty > 0 {
                 Some((self.current_duty as f32 / max_duty as f32).clamp(0.0, 1.0))
@@ -132,7 +133,11 @@ where
         Ok(MotorState {
             enabled: self.enabled,
             direction: self.direction,
-            duty_cycle: if self.speed_control.is_some() { Some(self.current_duty) } else { None },
+            duty_cycle: if self.speed_control.is_some() {
+                Some(self.current_duty)
+            } else {
+                None
+            },
             speed,
             pwm_frequency: None,
             max_duty_cycle: max_duty,
@@ -176,4 +181,3 @@ where
         Ok(())
     }
 }
-

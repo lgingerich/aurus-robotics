@@ -51,7 +51,9 @@ async fn main(_spawner: Spawner) {
 
     // Create motor instance
     let mut motor = Motor::<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>>::new(
-        dir_pin, Some(pwm), None,
+        dir_pin,
+        Some(pwm),
+        None,
     );
     info!("Motor initialized with PWM capabilities");
 

@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Pose {
     pub x: f64,
     pub y: f64,
@@ -22,6 +22,18 @@ impl Pose {
         } else {
             a
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Twist {
+    pub vx: f64, // Linear velocity in m/s for the robot's base_link frame
+    pub wz: f64, // Angular velocity in rad/s for the robot's base_link frame
+}
+
+impl Twist {
+    pub fn new(vx: f64, wz: f64) -> Self {
+        Twist { vx, wz }
     }
 }
 
@@ -50,8 +62,8 @@ impl ChassisSpeeds {
 }
 
 pub struct DifferentialDriveKinematics {
-    wheel_radius: f64,    // meters
-    axle_length: f64,     // meters (distance between wheel centers)
+    wheel_radius: f64, // meters
+    axle_length: f64,  // meters (distance between wheel centers)
 }
 
 impl DifferentialDriveKinematics {
@@ -125,7 +137,7 @@ mod tests {
         assert!((Pose::normalize_angle(-2.5 * PI) - -0.5 * PI).abs() < EPSILON);
         assert!((Pose::normalize_angle(-3.0 * PI) - -PI).abs() < EPSILON);
     }
-    
+
     #[test]
     fn test_kinematics_constructor() {
         let kinematics = DifferentialDriveKinematics::new(0.1, 0.5);
@@ -149,10 +161,10 @@ mod tests {
     fn test_forward_kinematics_straight() {
         let kinematics = DifferentialDriveKinematics::new(0.1, 0.5); // r=0.1m, L=0.5m
         let wheel_speeds = WheelSpeeds::new(10.0, 10.0); // Both wheels 10 rad/s
-                                                          // v_l = 10 * 0.1 = 1 m/s
-                                                          // v_r = 10 * 0.1 = 1 m/s
-                                                          // v = (1 + 1) / 2 = 1 m/s
-                                                          // omega = (1 - 1) / 0.5 = 0 rad/s
+        // v_l = 10 * 0.1 = 1 m/s
+        // v_r = 10 * 0.1 = 1 m/s
+        // v = (1 + 1) / 2 = 1 m/s
+        // omega = (1 - 1) / 0.5 = 0 rad/s
         let chassis_speeds = kinematics.forward_kinematics(wheel_speeds);
         assert!((chassis_speeds.v - 1.0).abs() < EPSILON);
         assert!((chassis_speeds.omega - 0.0).abs() < EPSILON);
@@ -161,24 +173,24 @@ mod tests {
     #[test]
     fn test_forward_kinematics_pivot_turn() {
         let kinematics = DifferentialDriveKinematics::new(0.1, 0.5); // r=0.1m, L=0.5m
-        let wheel_speeds = WheelSpeeds::new(-5.0, 5.0);   // Left -5 rad/s, Right 5 rad/s
-                                                          // v_l = -5 * 0.1 = -0.5 m/s
-                                                          // v_r = 5 * 0.1 = 0.5 m/s
-                                                          // v = (0.5 + (-0.5)) / 2 = 0 m/s
-                                                          // omega = (0.5 - (-0.5)) / 0.5 = 1 / 0.5 = 2 rad/s
+        let wheel_speeds = WheelSpeeds::new(-5.0, 5.0); // Left -5 rad/s, Right 5 rad/s
+        // v_l = -5 * 0.1 = -0.5 m/s
+        // v_r = 5 * 0.1 = 0.5 m/s
+        // v = (0.5 + (-0.5)) / 2 = 0 m/s
+        // omega = (0.5 - (-0.5)) / 0.5 = 1 / 0.5 = 2 rad/s
         let chassis_speeds = kinematics.forward_kinematics(wheel_speeds);
         assert!((chassis_speeds.v - 0.0).abs() < EPSILON);
         assert!((chassis_speeds.omega - 2.0).abs() < EPSILON);
     }
-    
+
     #[test]
     fn test_forward_kinematics_gentle_turn() {
         let kinematics = DifferentialDriveKinematics::new(0.1, 0.5); // r=0.1m, L=0.5m
-        let wheel_speeds = WheelSpeeds::new(5.0, 10.0);   // Left 5 rad/s, Right 10 rad/s
-                                                          // v_l = 5 * 0.1 = 0.5 m/s
-                                                          // v_r = 10 * 0.1 = 1.0 m/s
-                                                          // v = (1.0 + 0.5) / 2 = 0.75 m/s
-                                                          // omega = (1.0 - 0.5) / 0.5 = 0.5 / 0.5 = 1 rad/s
+        let wheel_speeds = WheelSpeeds::new(5.0, 10.0); // Left 5 rad/s, Right 10 rad/s
+        // v_l = 5 * 0.1 = 0.5 m/s
+        // v_r = 10 * 0.1 = 1.0 m/s
+        // v = (1.0 + 0.5) / 2 = 0.75 m/s
+        // omega = (1.0 - 0.5) / 0.5 = 0.5 / 0.5 = 1 rad/s
         let chassis_speeds = kinematics.forward_kinematics(wheel_speeds);
         assert!((chassis_speeds.v - 0.75).abs() < EPSILON);
         assert!((chassis_speeds.omega - 1.0).abs() < EPSILON);
@@ -265,7 +277,7 @@ mod tests {
         let chassis_speeds = ChassisSpeeds::new(1.0, 0.0);
         kinematics.update_pose(current_pose, chassis_speeds, -0.1);
     }
-    
+
     #[test]
     fn test_update_pose_from_wheel_speeds_straight() {
         let kinematics = DifferentialDriveKinematics::new(0.1, 0.5); // r=0.1m, L=0.5m
@@ -283,14 +295,14 @@ mod tests {
     fn test_update_pose_from_wheel_speeds_pivot_turn() {
         let kinematics = DifferentialDriveKinematics::new(0.1, 0.5); // r=0.1m, L=0.5m
         let current_pose = Pose::new(0.0, 0.0, 0.0);
-        let wheel_speeds = WheelSpeeds::new(-PI, PI);   // Left -PI rad/s, Right PI rad/s
-                                                        // v_l = -PI * 0.1 = -0.1*PI
-                                                        // v_r = PI * 0.1 = 0.1*PI
-                                                        // v = 0 m/s
-                                                        // omega = (0.1*PI - (-0.1*PI)) / 0.5 = (0.2*PI) / 0.5 = 0.4*PI rad/s
+        let wheel_speeds = WheelSpeeds::new(-PI, PI); // Left -PI rad/s, Right PI rad/s
+        // v_l = -PI * 0.1 = -0.1*PI
+        // v_r = PI * 0.1 = 0.1*PI
+        // v = 0 m/s
+        // omega = (0.1*PI - (-0.1*PI)) / 0.5 = (0.2*PI) / 0.5 = 0.4*PI rad/s
         let dt = 1.0; // 1 second
         // Expected theta_new = 0 + 0.4*PI*1 = 0.4*PI
-        
+
         let new_pose = kinematics.update_pose_from_wheel_speeds(current_pose, wheel_speeds, dt);
         assert!((new_pose.x - 0.0).abs() < EPSILON);
         assert!((new_pose.y - 0.0).abs() < EPSILON);

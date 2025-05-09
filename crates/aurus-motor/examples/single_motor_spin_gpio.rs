@@ -1,17 +1,14 @@
 #![no_std]
 #![no_main]
 
-use aurus_core::{
-    devices::motor::Motor,
-    traits::motor::MotorControl,
-};
-use embassy_stm32::{
-    gpio::{Level, Output, Speed},
-    timer::simple_pwm::SimplePwm,
-    peripherals::TIM1,
-};
+use aurus_core::{devices::motor::Motor, traits::motor::MotorControl};
 use defmt::*;
 use embassy_executor::Spawner;
+use embassy_stm32::{
+    gpio::{Level, Output, Speed},
+    peripherals::TIM1,
+    timer::simple_pwm::SimplePwm,
+};
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -33,7 +30,8 @@ async fn main(_spawner: Spawner) {
     let enable_pin = Output::new(p.PA1, Level::Low, Speed::Low);
 
     // Create motor with our GPIO capabilities
-    let mut motor: Motor<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>> = Motor::new(direction_pin, None, Some(enable_pin));
+    let mut motor: Motor<Output<'static>, SimplePwm<'static, TIM1>, Output<'static>> =
+        Motor::new(direction_pin, None, Some(enable_pin));
     info!("Motor initialized with GPIO capabilities");
 
     info!("Entering main control loop");
