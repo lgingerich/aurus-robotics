@@ -1,0 +1,29 @@
+[workspace]
+members = [
+    ".", # The root package (main application)
+    "crates/aurus-kinematics",
+    "crates/aurus-navigation",
+    "crates/aurus-motor"
+]
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0.98"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+
+# The root package is also a binary crate
+[package]
+name = "aurus-robotics"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aurus-kinematics = { path = "crates/aurus-kinematics" }
+aurus-navigation = { path = "crates/aurus-navigation" }
+aurus-motor = { path = "crates/aurus-motor" }
+
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
