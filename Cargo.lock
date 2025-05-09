@@ -89,10 +89,8 @@ dependencies = [
 name = "aurus-kinematics"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "libm",
- "tracing",
- "tracing-subscriber",
+ "serde",
 ]
 
 [[package]]

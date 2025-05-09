@@ -4,7 +4,7 @@ use tracing::{debug, info};
 
 use crate::blackboard::{Blackboard, snapshot};
 use crate::bus::Topic;
-use aurus_kinematics::{ChassisSpeeds, DifferentialDriveKinematics, Pose, Twist};
+use aurus_kinematics::{ChassisSpeeds, DifferentialDrive, Pose, Twist};
 
 pub fn apply_twist(_t: &Twist) {}
 
@@ -118,8 +118,10 @@ pub fn update_pose_from_kinematics(previous_pose: &Pose, applied_twist: &Twist, 
     // TODO: These values (wheel_radius, axle_length) should ideally come from configuration.
     let wheel_radius = 0.1; // meters
     let axle_length = 0.5; // meters
-    let kinematics_handler = DifferentialDriveKinematics::new(wheel_radius, axle_length);
+    let kinematics_handler = DifferentialDrive::new(wheel_radius, axle_length).unwrap();
 
     // Call the crate's update_pose function
-    kinematics_handler.update_pose(*previous_pose, kinematics_chassis_speeds, dt)
+    kinematics_handler
+        .update_pose(*previous_pose, kinematics_chassis_speeds, dt)
+        .expect("Failed to update pose")
 }
