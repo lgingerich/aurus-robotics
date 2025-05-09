@@ -5,6 +5,12 @@ use tokio::sync::broadcast;
 use tokio::time;
 use tracing;
 
+// NEW: Import from aurus-kinematics crate
+use aurus_kinematics::{
+    self as kinematics_crate, ChassisSpeeds as KinematicsChassisSpeeds, Pose as KinematicsPose,
+    DifferentialDriveKinematics,
+};
+
 use crate::blackboard::{Blackboard, snapshot};
 use crate::bus::Topic;
 use super::{Pose, Twist}; // Pose and Twist are in the parent module (main.rs)
@@ -105,17 +111,34 @@ fn compute_twist(current_pose: &Pose) -> Twist {
 } 
 
 pub fn update_pose_from_kinematics(previous_pose: &Pose, applied_twist: &Twist, dt: f64) -> Pose {
-    let new_x = previous_pose.x + applied_twist.vx * dt * previous_pose.th.cos();
-    let new_y = previous_pose.y + applied_twist.vx * dt * previous_pose.th.sin();
-    let mut new_th = previous_pose.th + applied_twist.wz * dt;
+    // Convert from local types to crate types
+    let current_kinematics_pose = KinematicsPose {
+        x: previous_pose.x,
+        y: previous_pose.y,
+        theta: previous_pose.th,
+    };
+    let kinematics_chassis_speeds = KinematicsChassisSpeeds {
+        v: applied_twist.vx,
+        omega: applied_twist.wz,
+    };
 
-    // Normalize theta to be between -PI and PI for consistency
-    while new_th > std::f64::consts::PI {
-        new_th -= 2.0 * std::f64::consts::PI;
+    // Instantiate the kinematics handler from the crate
+    // TODO: These values (wheel_radius, axle_length) should ideally come from configuration.
+    let wheel_radius = 0.1; // meters
+    let axle_length = 0.5;  // meters
+    let kinematics_handler = kinematics_crate::DifferentialDriveKinematics::new(wheel_radius, axle_length);
+
+    // Call the crate's update_pose function
+    let updated_kinematics_pose = kinematics_handler.update_pose(
+        current_kinematics_pose,
+        kinematics_chassis_speeds,
+        dt,
+    );
+
+    // Convert back from crate type to local type
+    Pose {
+        x: updated_kinematics_pose.x,
+        y: updated_kinematics_pose.y,
+        th: updated_kinematics_pose.theta,
     }
-    while new_th < -std::f64::consts::PI {
-        new_th += 2.0 * std::f64::consts::PI;
-    }
-    
-    Pose { x: new_x, y: new_y, th: new_th }
 }
