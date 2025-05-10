@@ -1,7 +1,8 @@
 mod blackboard;
 mod bus;
 mod graphics;
-mod navigation;
+mod motion_control;
+mod state_estimation;
 
 use blackboard::{Blackboard, raise_fault, snapshot, touch_cmd};
 use bus::Topic;
@@ -16,6 +17,7 @@ use tracing::{error, info, warn};
 use tracing_subscriber::{self, EnvFilter};
 
 use aurus_kinematics::{Pose, Twist};
+use aurus_navigation;
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -72,7 +74,7 @@ async fn run(pose_topic: Topic<Pose>) -> anyhow::Result<()> {
             loop {
                 let applied_twist = last_applied_twist_reader_clone.read().unwrap();
                 current_pose =
-                    navigation::update_pose_from_kinematics(&current_pose, &applied_twist, dt);
+                    state_estimation::update_pose_from_kinematics(&current_pose, &applied_twist, dt);
                 pose_topic.publish(current_pose);
                 bb_clone.write().pose = current_pose;
                 sleeper.sleep(Duration::from_micros(10_000));
@@ -87,10 +89,10 @@ async fn run(pose_topic: Topic<Pose>) -> anyhow::Result<()> {
         let last_applied_twist_writer_clone = Arc::clone(&last_applied_twist_shared);
         move || {
             info!("Control thread started.");
-            let sleeper = SpinSleeper::new(1_000);
+            let sleeper = SpinSleeper::new(1_000); // 10 ms = 100 Hz
             loop {
                 if let Ok(twist) = twist_rx.try_recv() {
-                    navigation::apply_twist(&twist);
+                    motion_control::apply_twist(&twist);
                     *last_applied_twist_writer_clone.write().unwrap() = *twist;
                     touch_cmd(&bb_clone);
                 }
@@ -108,11 +110,15 @@ async fn run(pose_topic: Topic<Pose>) -> anyhow::Result<()> {
 async fn async_runtime(
     bb: Blackboard,
     mut pose_rx: tokio::sync::broadcast::Receiver<Arc<Pose>>,
-    twist_tx: Topic<Twist>,
+    twist_tx_topic: Topic<Twist>,
 ) -> anyhow::Result<()> {
     info!("Async runtime started.");
+
+    let initial_pose = snapshot(&bb).pose;
+    let twist_tx_sender = twist_tx_topic.get_sender();
+
     tokio::try_join!(
-        navigation::nav_task(bb.clone(), &mut pose_rx, twist_tx.clone()),
+        aurus_navigation::run_nav_task(initial_pose, &mut pose_rx, twist_tx_sender),
         watchdog(bb),
     )?;
     info!("Async runtime finished.");

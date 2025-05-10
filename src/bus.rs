@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::broadcast;
+use tracing::warn;
 
 /// Broadcast topic with bounded capacity.
 /// `T` must be `Send + Sync` because we hop across threads.
@@ -14,11 +15,20 @@ impl<T: Send + Sync + 'static> Topic<T> {
         Self { tx }
     }
 
-    pub fn publish(&self, msg: T) {
-        let _ = self.tx.send(Arc::new(msg));
+    pub fn publish(&self, value: T) {
+        if self.tx.receiver_count() > 0 {
+            if let Err(e) = self.tx.send(Arc::new(value)) {
+                warn!("Failed to publish to topic: {}", e);
+            }
+        }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Arc<T>> {
         self.tx.subscribe()
+    }
+
+    /// Returns a clone of the underlying broadcast sender.
+    pub fn get_sender(&self) -> broadcast::Sender<Arc<T>> {
+        self.tx.clone()
     }
 }

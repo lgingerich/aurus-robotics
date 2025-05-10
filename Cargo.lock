@@ -118,6 +118,8 @@ name = "aurus-navigation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aurus-kinematics",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]
