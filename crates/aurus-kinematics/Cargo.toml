@@ -1,6 +1,7 @@
 [package]
 name = "aurus-kinematics"
 version = "0.1.0"
+description = "A `no_std` library for 2D differential-drive robot kinematics.\n\nThis crate provides structures and functions for calculating robot pose, forward and inverse kinematics, and updating pose based on chassis or wheel speeds."
 edition = "2024"
 license = "MIT OR Apache-2.0"
 

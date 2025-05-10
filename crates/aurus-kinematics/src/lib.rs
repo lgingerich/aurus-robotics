@@ -1,9 +1,5 @@
 #![cfg_attr(not(test), no_std)]
 #![warn(missing_docs)]
-#![doc = "A `no_std` library for 2D differential-drive robot kinematics."]
-#![doc = ""]
-#![doc = "This crate provides structures and functions for calculating robot pose,"]
-#![doc = "forward and inverse kinematics, and updating pose based on chassis or wheel speeds."]
 
 use core::f64::consts::PI;
 use core::fmt;
