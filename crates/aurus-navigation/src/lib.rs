@@ -1,4 +1,6 @@
 pub mod astar;
+pub mod error;
+pub mod map;
 
 use std::{sync::Arc, time::Duration};
 use tokio::sync::broadcast;
