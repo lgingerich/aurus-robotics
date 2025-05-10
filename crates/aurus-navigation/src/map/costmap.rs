@@ -1,5 +1,10 @@
 #![warn(missing_docs)]
 
+// NOTES / TODO:
+// - Not no_std compatible
+// - Does not support negative coordinates (is this needed?)
+// I have a Point struct in common.rs. Should I use that for anything?
+
 use crate::error::NavigationError;
 
 /// Represents the cost of traversing a cell in the costmap.

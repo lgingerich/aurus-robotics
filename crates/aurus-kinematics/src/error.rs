@@ -1,5 +1,3 @@
-//! This module defines the error types used by the `aurus-kinematics` crate.
-
 #![warn(missing_docs)]
 
 /// Error type for kinematics operations.
