@@ -6,6 +6,7 @@
 
 use crate::error::NavigationError;
 use super::{GridPoint, WorldPoint};
+use rand::Rng;
 
 /// Represents the cost of traversing a cell in the costmap.
 /// The cost values are used for path planning and obstacle avoidance.
@@ -73,10 +74,8 @@ pub struct Costmap2D {
     height: usize,
     /// Resolution of the costmap in meters per cell
     resolution: f32,
-    /// X coordinate of the origin in world coordinates (meters)
-    origin_x: f32,
-    /// Y coordinate of the origin in world coordinates (meters)
-    origin_y: f32,
+    /// Origin of the costmap in world coordinates (meters). This is the bottom-left corner of the cell (0,0).
+    origin: WorldPoint,
     /// Vector storing the cost values for each cell
     data: Vec<CellCost>,
 }
@@ -109,15 +108,70 @@ impl Costmap2D {
             width,
             height,
             resolution,
-            origin_x: origin.x,
-            origin_y: origin.y,
+            origin,
             data: vec![CellCost::Free; width * height]
         })
     }
 
+    /// Creates a new Costmap2D with a specified number of random rectangular obstacles.
+    ///
+    /// # Arguments
+    /// * `width` - Width of the costmap in cells.
+    /// * `height` - Height of the costmap in cells.
+    /// * `resolution` - Resolution of the costmap in meters per cell.
+    /// * `origin` - The world coordinates (meters) of the cell (0,0) in the costmap.
+    /// * `num_obstacles` - The number of random obstacles to generate.
+    /// * `max_obstacle_dimension_cells` - The maximum width/height of any single obstacle in cells.
+    ///
+    /// # Returns
+    /// * `Result<Self, NavigationError>` - The created Costmap2D with obstacles or an error.
+    pub fn new_rand(
+        width: usize,
+        height: usize,
+        resolution: f32,
+        origin: WorldPoint,
+        num_obstacles: usize,
+        max_obstacle_dimension_cells: usize,
+    ) -> Result<Self, NavigationError> {
+        let mut costmap = Self::new(width, height, resolution, origin)?;
+
+        if num_obstacles == 0 || max_obstacle_dimension_cells == 0 {
+            return Ok(costmap); // No obstacles to add
+        }
+
+        let mut rng = rand::rng();
+
+        for _ in 0..num_obstacles {
+            // Determine obstacle dimensions, ensuring they are at least 1x1
+            let obs_width = rng.random_range(1..=max_obstacle_dimension_cells).min(width);
+            let obs_height = rng.random_range(1..=max_obstacle_dimension_cells).min(height);
+
+            // Ensure the map is large enough for the determined obstacle size and obstacle is not 0-sized
+            if width < obs_width || height < obs_height || obs_width == 0 || obs_height == 0 {
+                continue; 
+            }
+    
+            let start_x = rng.random_range(0..=(width - obs_width));
+            let start_y = rng.random_range(0..=(height - obs_height));
+    
+            for x_offset in 0..obs_width {
+                for y_offset in 0..obs_height {
+                    let current_x = start_x + x_offset;
+                    let current_y = start_y + y_offset;
+                    // Internal call to set_cost, already checks bounds, but they should be correct by logic above.
+                    match costmap.set_cost(GridPoint::new(current_x, current_y), CellCost::Lethal) {
+                        Ok(_) => {}
+                        Err(e) => return Err(e), // Propagate error if set_cost fails
+                    }
+                }
+            }
+        }
+        Ok(costmap)
+    }
+
     /// Calculates the index in the data vector for a given grid point
     fn get_index(&self, p: GridPoint) -> usize {
-        p.y * self.width + p.x
+        p.y * self.get_width() + p.x
     }
 
     /// Converts world coordinates (in meters) to grid coordinates (in cells).
@@ -130,12 +184,12 @@ impl Costmap2D {
     /// * `Option<GridPoint>` - Grid coordinates if within bounds, None otherwise
     pub fn world_to_grid(&self, world_p: WorldPoint) -> Option<GridPoint> {
         // Convert to grid coordinates
-        let grid_x_f = (world_p.x - self.origin_x) / self.resolution;
-        let grid_y_f = (world_p.y - self.origin_y) / self.resolution;
+        let grid_x_f = (world_p.x - self.origin.x) / self.resolution;
+        let grid_y_f = (world_p.y - self.origin.y) / self.resolution;
 
         // Ensure the point is not effectively outside due to floating point issues at the boundary
         // A point exactly on the max boundary is considered outside.
-        if grid_x_f < 0.0 || grid_y_f < 0.0 || grid_x_f >= self.width as f32 || grid_y_f >= self.height as f32 {
+        if grid_x_f < 0.0 || grid_y_f < 0.0 || grid_x_f >= self.get_width() as f32 || grid_y_f >= self.get_height() as f32 {
             return None;
         }
 
@@ -144,7 +198,7 @@ impl Costmap2D {
 
         // Final check to ensure casted usize is within bounds
         // This is somewhat redundant given the f32 check above but safe
-        if grid_x < self.width && grid_y < self.height {
+        if grid_x < self.get_width() && grid_y < self.get_height() {
             Some(GridPoint::new(grid_x, grid_y))
         } else {
             None
@@ -160,9 +214,9 @@ impl Costmap2D {
     /// # Returns
     /// * `Option<WorldPoint>` - World coordinates if within bounds, None otherwise
     pub fn grid_to_world(&self, grid_p: GridPoint) -> Option<WorldPoint> {
-        if grid_p.x < self.width && grid_p.y < self.height {
-            let world_x = self.origin_x + (grid_p.x as f32 + 0.5) * self.resolution;
-            let world_y = self.origin_y + (grid_p.y as f32 + 0.5) * self.resolution;
+        if grid_p.x < self.get_width() && grid_p.y < self.get_height() {
+            let world_x = self.origin.x + (grid_p.x as f32 + 0.5) * self.resolution;
+            let world_y = self.origin.y + (grid_p.y as f32 + 0.5) * self.resolution;
             Some(WorldPoint::new(world_x, world_y))
         } else {
             None
@@ -205,7 +259,7 @@ impl Costmap2D {
     /// # Returns
     /// * `WorldPoint` - The origin of the map in world coordinates.
     pub fn get_origin(&self) -> WorldPoint {
-        WorldPoint::new(self.origin_x, self.origin_y)
+        self.origin
     }
 
     /// Gets the world coordinates of the map's bounds.
@@ -213,9 +267,9 @@ impl Costmap2D {
     /// # Returns
     /// * `(WorldPoint, WorldPoint)` - The minimum and maximum world points (bottom-left and top-right corners)
     pub fn get_world_bounds(&self) -> (WorldPoint, WorldPoint) {
-        let min_p = WorldPoint::new(self.origin_x, self.origin_y);
-        let max_x = self.origin_x + (self.width as f32 * self.resolution);
-        let max_y = self.origin_y + (self.height as f32 * self.resolution);
+        let min_p = self.origin; // Origin is the bottom-left corner
+        let max_x = self.origin.x + (self.get_width() as f32 * self.resolution);
+        let max_y = self.origin.y + (self.get_height() as f32 * self.resolution);
         let max_p = WorldPoint::new(max_x, max_y);
         (min_p, max_p)
     }
@@ -228,7 +282,7 @@ impl Costmap2D {
     /// # Returns
     /// * `Result<&CellCost, NavigationError>` - The cost at the specified position or an error if out of bounds
     pub fn get_cost(&self, p: GridPoint) -> Result<&CellCost, NavigationError> {
-        if p.x < self.width && p.y < self.height {
+        if p.x < self.get_width() && p.y < self.get_height() {
             let index = self.get_index(p);
             Ok(&self.data[index])
         } else {
@@ -244,7 +298,7 @@ impl Costmap2D {
     /// # Returns
     /// * `Result<&mut CellCost, NavigationError>` - Mutable reference to the cost or an error if out of bounds
     pub fn get_cost_mut(&mut self, p: GridPoint) -> Result<&mut CellCost, NavigationError> {
-        if p.x < self.width && p.y < self.height {
+        if p.x < self.get_width() && p.y < self.get_height() {
             let index = self.get_index(p);
             Ok(&mut self.data[index])
         } else {
@@ -261,7 +315,7 @@ impl Costmap2D {
     /// # Returns
     /// * `Result<(), NavigationError>` - Success or error if out of bounds
     pub fn set_cost(&mut self, p: GridPoint, cost: CellCost) -> Result<(), NavigationError> {
-        if p.x < self.width && p.y < self.height {
+        if p.x < self.get_width() && p.y < self.get_height() {
             let index = self.get_index(p);
             self.data[index] = cost;
             Ok(())
@@ -303,17 +357,17 @@ impl Costmap2D {
         let mut new_data = self.data.clone();
 
         // Iterate through all cells
-        for y_idx in 0..self.height {
-            for x_idx in 0..self.width {
+        for y_idx in 0..self.get_height() {
+            for x_idx in 0..self.get_width() {
                 let current_grid_p = GridPoint::new(x_idx, y_idx);
                 if let Ok(cost_val) = self.get_cost(current_grid_p) {
                     if *cost_val == CellCost::Lethal {
                         // Inflate this obstacle
                         // Use checked arithmetic to avoid underflow/overflow
                         let start_y = y_idx.saturating_sub(radius_cells);
-                        let end_y = (y_idx + radius_cells).min(self.height - 1);
+                        let end_y = (y_idx + radius_cells).min(self.get_height() - 1);
                         let start_x = x_idx.saturating_sub(radius_cells);
-                        let end_x = (x_idx + radius_cells).min(self.width - 1);
+                        let end_x = (x_idx + radius_cells).min(self.get_width() - 1);
 
                         for ny_idx in start_y..=end_y {
                             for nx_idx in start_x..=end_x {
@@ -373,8 +427,8 @@ impl Costmap2D {
         
         // Second pass: ensure original lethal obstacles remain lethal
         // as inflation might have overwritten them with Inflated(0) if radius is small.
-        for y_idx in 0..self.height {
-            for x_idx in 0..self.width {
+        for y_idx in 0..self.get_height() {
+            for x_idx in 0..self.get_width() {
                 let p = GridPoint::new(x_idx, y_idx);
                 if let Ok(original_cost) = self.get_cost(p) {
                     if *original_cost == CellCost::Lethal {
@@ -397,17 +451,27 @@ impl Costmap2D {
     pub fn reset_to_unknown(&mut self) {
         self.data.fill(CellCost::Unknown);
     }
+
+    /// Gets the width of the costmap in cells.
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
+
+    /// Gets the height of the costmap in cells.
+    pub fn get_height(&self) -> usize {
+        self.height
+    }
 }
 
 impl std::fmt::Display for Costmap2D {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Costmap2D ({}x{}, resolution: {:.3}m)", 
-                self.width, self.height, self.resolution)?;
-        writeln!(f, "Origin: ({:.3}, {:.3})", self.origin_x, self.origin_y)?;
+                self.get_width(), self.get_height(), self.resolution)?;
+        writeln!(f, "Origin: ({:.3}, {:.3})", self.origin.x, self.origin.y)?;
         
         // Print the costmap grid
-        for y_idx in 0..self.height {
-            for x_idx in 0..self.width {
+        for y_idx in 0..self.get_height() {
+            for x_idx in 0..self.get_width() {
                 if let Ok(cost_val) = self.get_cost(GridPoint::new(x_idx, y_idx)) {
                     write!(f, "{:3} ", cost_val.as_u8())?;
                 }
@@ -429,8 +493,7 @@ mod tests {
         assert_eq!(costmap.width, 10);
         assert_eq!(costmap.height, 10);
         assert_eq!(costmap.resolution, 0.1);
-        assert_eq!(costmap.origin_x, 0.0);
-        assert_eq!(costmap.origin_y, 0.0);
+        assert_eq!(costmap.get_origin(), origin);
     }
 
     #[test]
@@ -491,7 +554,7 @@ mod tests {
         assert!((world_p_center1.y - 0.05).abs() < 1e-6);
         
         // World (-0.5, -0.5) should map to grid (0,0) (origin, bottom-left corner of cell (0,0))
-        let world_p2 = WorldPoint::new(-0.5, -0.5);
+        let world_p2 = WorldPoint::new(-0.5, -0.5); // This is exactly the origin
         let grid_p2 = costmap.world_to_grid(world_p2).unwrap();
         assert_eq!(grid_p2, GridPoint::new(0, 0));
 
@@ -502,25 +565,25 @@ mod tests {
         assert!((world_p_center2.y - (-0.45)).abs() < 1e-6);
         
         // Test out of bounds world point (just outside top-right)
-        let world_max_x = origin.x + costmap.width as f32 * costmap.resolution;
-        let world_max_y = origin.y + costmap.height as f32 * costmap.resolution;
+        let world_max_x = costmap.get_origin().x + costmap.get_width() as f32 * costmap.resolution;
+        let world_max_y = costmap.get_origin().y + costmap.get_height() as f32 * costmap.resolution;
         assert!(costmap.world_to_grid(WorldPoint::new(world_max_x, world_max_y)).is_none()); // Exactly on boundary is out
         assert!(costmap.world_to_grid(WorldPoint::new(world_max_x + 0.01, world_max_y + 0.01)).is_none());
         
         // Test out of bounds grid point
         assert!(costmap.grid_to_world(GridPoint::new(10, 10)).is_none());
-        assert!(costmap.grid_to_world(GridPoint::new(costmap.width, costmap.height -1)).is_none());
-        assert!(costmap.grid_to_world(GridPoint::new(costmap.width -1, costmap.height)).is_none());
+        assert!(costmap.grid_to_world(GridPoint::new(costmap.get_width(), costmap.get_height() -1)).is_none());
+        assert!(costmap.grid_to_world(GridPoint::new(costmap.get_width() -1, costmap.get_height())).is_none());
 
         // Test world point that maps to the last valid cell (width-1, height-1)
-        let last_cell_world_x = origin.x + ((costmap.width -1) as f32 + 0.5) * costmap.resolution;
-        let last_cell_world_y = origin.y + ((costmap.height -1) as f32 + 0.5) * costmap.resolution;
+        let last_cell_world_x = costmap.get_origin().x + ((costmap.get_width() -1) as f32 + 0.5) * costmap.resolution;
+        let last_cell_world_y = costmap.get_origin().y + ((costmap.get_height() -1) as f32 + 0.5) * costmap.resolution;
         let grid_last = costmap.world_to_grid(WorldPoint::new(last_cell_world_x, last_cell_world_y)).unwrap();
-        assert_eq!(grid_last, GridPoint::new(costmap.width-1, costmap.height-1));
+        assert_eq!(grid_last, GridPoint::new(costmap.get_width()-1, costmap.get_height()-1));
 
         // Test a point that is on the boundary between cells, should go to lower-left
-        let boundary_x = origin.x + 1.0 * costmap.resolution; // Boundary between cell 0 and 1
-        let boundary_y = origin.y + 1.0 * costmap.resolution; // Boundary between cell 0 and 1
+        let boundary_x = costmap.get_origin().x + 1.0 * costmap.resolution; // Boundary between cell 0 and 1
+        let boundary_y = costmap.get_origin().y + 1.0 * costmap.resolution; // Boundary between cell 0 and 1
         let on_boundary_grid = costmap.world_to_grid(WorldPoint::new(boundary_x, boundary_y)).unwrap();
         assert_eq!(on_boundary_grid, GridPoint::new(1,1)); // Should map to cell (1,1)
     }

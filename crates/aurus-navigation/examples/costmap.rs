@@ -1,22 +1,22 @@
 use aurus_navigation::map::costmap::{Costmap2D, CellCost};
+use aurus_navigation::map::{GridPoint, WorldPoint};
 
 fn main() {
-    // Create a 20x20 costmap with 0.1m resolution, centered at (0,0)
-    let mut costmap = Costmap2D::new(20, 20, 0.1, -1.0, -1.0).unwrap();
+    let mut costmap = Costmap2D::new(20, 20, 0.1, WorldPoint::new(-1.0, -1.0)).unwrap();
 
     // Create a more complex obstacle pattern
     // Main obstacle in the center
     for x in 8..12 {
         for y in 8..12 {
-            costmap.set_cost(x, y, CellCost::Lethal).unwrap();
+            costmap.set_cost(GridPoint::new(x, y), CellCost::Lethal).unwrap();
         }
     }
 
     // Add some inscribed areas (guaranteed collision)
     for x in 7..13 {
         for y in 7..13 {
-            if costmap.get_cost(x, y).unwrap() == &CellCost::Free {
-                costmap.set_cost(x, y, CellCost::Inscribed).unwrap();
+            if costmap.get_cost(GridPoint::new(x, y)).unwrap() == &CellCost::Free {
+                costmap.set_cost(GridPoint::new(x, y), CellCost::Inscribed).unwrap();
             }
         }
     }
@@ -25,28 +25,29 @@ fn main() {
     costmap.inflate_obstacles(0.3).unwrap();
 
     // Demonstrate world coordinate conversion
-    let world_pos = (0.0, 0.0);
-    if let Some((grid_x, grid_y)) = costmap.world_to_grid(world_pos.0, world_pos.1) {
-        println!("World position {:?} maps to grid position ({}, {})", world_pos, grid_x, grid_y);
+    let world_pos_tuple = (0.0, 0.0);
+    let world_pos = WorldPoint::new(world_pos_tuple.0, world_pos_tuple.1);
+    if let Some(grid_p) = costmap.world_to_grid(world_pos) {
+        println!("World position {:?} maps to grid position ({}, {})", world_pos_tuple, grid_p.x, grid_p.y);
         
         // Convert back to world coordinates
-        if let Some((back_x, back_y)) = costmap.grid_to_world(grid_x, grid_y) {
+        if let Some(back_p) = costmap.grid_to_world(grid_p) {
             println!("Grid position ({}, {}) maps back to world position ({:.2}, {:.2})", 
-                    grid_x, grid_y, back_x, back_y);
+                    grid_p.x, grid_p.y, back_p.x, back_p.y);
         }
     }
 
     // Get world bounds
-    let ((min_x, min_y), (max_x, max_y)) = costmap.get_world_bounds();
+    let (min_p, max_p) = costmap.get_world_bounds();
     println!("\nMap bounds:");
-    println!("Min: ({:.2}, {:.2})", min_x, min_y);
-    println!("Max: ({:.2}, {:.2})", max_x, max_y);
+    println!("Min: ({:.2}, {:.2})", min_p.x, min_p.y);
+    println!("Max: ({:.2}, {:.2})", max_p.x, max_p.y);
 
     // Print the costmap with a legend
     println!("\nCostmap visualization (0=Free, 1-252=Inflated, 253=Inscribed, 254=Lethal, 255=Unknown):");
     for y in 0..20 {
         for x in 0..20 {
-            let cost = costmap.get_cost(x, y).unwrap();
+            let cost = costmap.get_cost(GridPoint::new(x, y)).unwrap();
             print!("{:3} ", cost.as_u8());
         }
         println!();
@@ -54,29 +55,32 @@ fn main() {
 
     // Demonstrate setting and getting costs using world coordinates
     // Let's check a position we know has a lethal cost (center of the map)
-    let test_world_pos = (0.0, 0.0);  // This should be in the center where we set lethal costs
-    if let Some((grid_x, grid_y)) = costmap.world_to_grid(test_world_pos.0, test_world_pos.1) {
+    let test_world_pos_tuple = (0.0, 0.0);  // This should be in the center where we set lethal costs
+    let test_world_p = WorldPoint::new(test_world_pos_tuple.0, test_world_pos_tuple.1);
+    if let Some(grid_p) = costmap.world_to_grid(test_world_p) {
         println!("\nCost at world position {:?} (grid: {}, {}): {}", 
-                test_world_pos, 
-                grid_x, grid_y,
-                costmap.get_cost_at_world(test_world_pos.0, test_world_pos.1).unwrap());
+                test_world_pos_tuple, 
+                grid_p.x, grid_p.y,
+                costmap.get_cost_at_world(test_world_p).unwrap());
     }
 
     // Let's also check a position we know is free
-    let free_world_pos = (-0.8, -0.8);  // This should be in a free area
-    if let Some((grid_x, grid_y)) = costmap.world_to_grid(free_world_pos.0, free_world_pos.1) {
+    let free_world_pos_tuple = (-0.8, -0.8);  // This should be in a free area
+    let free_world_p = WorldPoint::new(free_world_pos_tuple.0, free_world_pos_tuple.1);
+    if let Some(grid_p) = costmap.world_to_grid(free_world_p) {
         println!("Cost at world position {:?} (grid: {}, {}): {}", 
-                free_world_pos, 
-                grid_x, grid_y,
-                costmap.get_cost_at_world(free_world_pos.0, free_world_pos.1).unwrap());
+                free_world_pos_tuple, 
+                grid_p.x, grid_p.y,
+                costmap.get_cost_at_world(free_world_p).unwrap());
     }
 
     // Let's check a position in the inflated area
-    let inflated_world_pos = (0.2, 0.1);  // This should be in the inflated area
-    if let Some((grid_x, grid_y)) = costmap.world_to_grid(inflated_world_pos.0, inflated_world_pos.1) {
+    let inflated_world_pos_tuple = (0.2, 0.1);  // This should be in the inflated area
+    let inflated_world_p = WorldPoint::new(inflated_world_pos_tuple.0, inflated_world_pos_tuple.1);
+    if let Some(grid_p) = costmap.world_to_grid(inflated_world_p) {
         println!("Cost at world position {:?} (grid: {}, {}): {}", 
-                inflated_world_pos, 
-                grid_x, grid_y,
-                costmap.get_cost_at_world(inflated_world_pos.0, inflated_world_pos.1).unwrap());
+                inflated_world_pos_tuple, 
+                grid_p.x, grid_p.y,
+                costmap.get_cost_at_world(inflated_world_p).unwrap());
     }
 }
