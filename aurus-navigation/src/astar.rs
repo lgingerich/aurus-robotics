@@ -172,7 +172,8 @@ pub fn astar_search_world(costmap: &Costmap2D, start_world: WorldPoint, goal_wor
 mod tests {
     use super::*;
     // Ensure Costmap2D, CellCost, GridPoint, WorldPoint are in scope for tests
-    use crate::map::{Costmap2D, CellCost, GridPoint, WorldPoint};
+    use crate::map::costmap::{Costmap2D, CellCost};
+    use crate::map::{GridPoint, WorldPoint};
 
     #[test]
     fn test_astar_simple_path() {
