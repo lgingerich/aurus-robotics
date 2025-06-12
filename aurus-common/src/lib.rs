@@ -1,7 +1,7 @@
 //! Core geometric types and operations for SLAM systems.
 //!
 //! This module provides fundamental geometric primitives using a body/world coordinate
-//! system convention with generalizable dimensions. It wraps nalgebra types to provide 
+//! system convention with generalizable dimensions. It wraps nalgebra types to provide
 //! domain-specific operations while maintaining type safety between different coordinate frames.
 //!
 //! # Coordinate Systems
@@ -10,11 +10,11 @@
 //! - **Body Frame**: Local coordinate system attached to the sensor/robot
 //! - **Sensor Frame**: 2D coordinate system of sensor observations (e.g., pixels)
 
-use nalgebra::{Point, Vector3, Matrix3, Matrix4, UnitQuaternion, Isometry3, Point2, Point3};
+use nalgebra::{Isometry3, Matrix3, Matrix4, Point, Point2, Point3, UnitQuaternion, Vector3};
 use std::fmt;
 
 // Re-export nalgebra types for direct use where appropriate
-pub use nalgebra::{Vector2, Vector4, Matrix2, Matrix6};
+pub use nalgebra::{Matrix2, Matrix6, Vector2, Vector4};
 
 // Generalizable dimension type aliases
 /// A point in world/global coordinates with D dimensions.
@@ -122,8 +122,7 @@ pub trait Point2DExt {
 
 impl Point2DExt for Point2D {
     fn is_in_bounds(&self, width: u32, height: u32) -> bool {
-        self.x >= 0.0 && self.x < width as f64 && 
-        self.y >= 0.0 && self.y < height as f64
+        self.x >= 0.0 && self.x < width as f64 && self.y >= 0.0 && self.y < height as f64
     }
 }
 
@@ -224,7 +223,7 @@ impl BodyPointExt for BodyPoint {
 
         let x = projection.fx * self.x / self.z + projection.cx;
         let y = projection.fy * self.y / self.z + projection.cy;
-        
+
         let sensor_point = Point2::new(x, y);
         if sensor_point.is_in_bounds(projection.width, projection.height) {
             Some(sensor_point)
@@ -287,7 +286,10 @@ impl Pose {
     /// ```
     pub fn from_matrix_translation(rotation: Matrix3<f64>, translation: Vector3<f64>) -> Self {
         Self {
-            isometry: Isometry3::from_parts(translation.into(), UnitQuaternion::from_matrix(&rotation)),
+            isometry: Isometry3::from_parts(
+                translation.into(),
+                UnitQuaternion::from_matrix(&rotation),
+            ),
         }
     }
 
@@ -324,7 +326,7 @@ impl Pose {
     /// The rotation matrix representing the orientation of the body frame
     /// relative to the world frame.
     pub fn rotation(&self) -> Matrix3<f64> {
-        self.isometry.rotation.to_rotation_matrix().matrix().clone()
+        *self.isometry.rotation.to_rotation_matrix().matrix()
     }
 
     /// Returns the translation component as a 3D vector.
@@ -334,7 +336,7 @@ impl Pose {
     /// The translation vector representing the position of the body frame
     /// origin in world coordinates.
     pub fn translation(&self) -> Vector3<f64> {
-        self.isometry.translation.vector.clone()
+        self.isometry.translation.vector
     }
 
     /// Composes this pose with another pose.
@@ -435,18 +437,25 @@ impl Pose {
     /// ```
     pub fn from_matrix(matrix: &Matrix4<f64>) -> Option<Self> {
         // Check if the last row is [0, 0, 0, 1] for a valid homogeneous matrix
-        if (matrix[(3, 0)] - 0.0).abs() > 1e-10 || 
-           (matrix[(3, 1)] - 0.0).abs() > 1e-10 || 
-           (matrix[(3, 2)] - 0.0).abs() > 1e-10 || 
-           (matrix[(3, 3)] - 1.0).abs() > 1e-10 {
+        if (matrix[(3, 0)] - 0.0).abs() > 1e-10
+            || (matrix[(3, 1)] - 0.0).abs() > 1e-10
+            || (matrix[(3, 2)] - 0.0).abs() > 1e-10
+            || (matrix[(3, 3)] - 1.0).abs() > 1e-10
+        {
             return None;
         }
 
         // Extract the 3x3 rotation part
         let rotation_matrix = Matrix3::new(
-            matrix[(0, 0)], matrix[(0, 1)], matrix[(0, 2)],
-            matrix[(1, 0)], matrix[(1, 1)], matrix[(1, 2)],
-            matrix[(2, 0)], matrix[(2, 1)], matrix[(2, 2)],
+            matrix[(0, 0)],
+            matrix[(0, 1)],
+            matrix[(0, 2)],
+            matrix[(1, 0)],
+            matrix[(1, 1)],
+            matrix[(1, 2)],
+            matrix[(2, 0)],
+            matrix[(2, 1)],
+            matrix[(2, 2)],
         );
 
         // Extract the translation vector
@@ -529,8 +538,12 @@ impl Pose {
         // This avoids the complex V matrix computation but still provides
         // a useful representation for interpolation and optimization
         nalgebra::Vector6::new(
-            axis_angle.x, axis_angle.y, axis_angle.z,
-            translation.x, translation.y, translation.z
+            axis_angle.x,
+            axis_angle.y,
+            axis_angle.z,
+            translation.x,
+            translation.y,
+            translation.z,
         )
     }
 
@@ -555,7 +568,7 @@ impl Pose {
     ///
     /// let tangent = Vector6::new(0.1, 0.2, 0.3, 1.0, 2.0, 3.0);
     /// let pose = Pose::exp(&tangent);
-    /// 
+    ///
     /// // Verify round-trip consistency
     /// let recovered = pose.log();
     /// assert!((tangent - recovered).norm() < 1e-10);
@@ -604,20 +617,20 @@ impl Pose {
     /// let pose1 = Pose::from_translation(Vector3::new(0.0, 0.0, 0.0));
     /// let pose2 = Pose::from_translation(Vector3::new(2.0, 0.0, 0.0));
     /// let midpoint = pose1.interpolate(&pose2, 0.5);
-    /// 
+    ///
     /// let expected_translation = Vector3::new(1.0, 0.0, 0.0);
     /// assert!((midpoint.translation() - expected_translation).norm() < 1e-10);
     /// ```
     pub fn interpolate(&self, other: &Pose, t: f64) -> Pose {
         // Clamp t to [0, 1]
-        let t = t.max(0.0).min(1.0);
+        let t = t.clamp(0.0, 1.0);
 
         // SLERP for rotation
         let rotation = self.isometry.rotation.slerp(&other.isometry.rotation, t);
 
         // Linear interpolation for translation
-        let translation = self.isometry.translation.vector * (1.0 - t) + 
-                         other.isometry.translation.vector * t;
+        let translation =
+            self.isometry.translation.vector * (1.0 - t) + other.isometry.translation.vector * t;
 
         Self {
             isometry: Isometry3::from_parts(translation.into(), rotation),
@@ -651,17 +664,17 @@ impl Pose {
     /// ```
     pub fn interpolate_lie(&self, other: &Pose, t: f64) -> Pose {
         // Clamp t to [0, 1]
-        let t = t.max(0.0).min(1.0);
+        let t = t.clamp(0.0, 1.0);
 
         // Compute relative transformation
         let relative = self.relative_to(other);
-        
+
         // Get Lie algebra representation
         let tangent = relative.log();
-        
+
         // Scale by interpolation parameter
         let scaled_tangent = tangent * t;
-        
+
         // Exponential map back to SE3 and compose with starting pose
         let interpolated_relative = Self::exp(&scaled_tangent);
         self.compose(&interpolated_relative)
@@ -701,7 +714,12 @@ impl ProjectionModel {
     /// ```
     pub fn new(fx: f64, fy: f64, cx: f64, cy: f64, width: u32, height: u32) -> Self {
         Self {
-            fx, fy, cx, cy, width, height,
+            fx,
+            fy,
+            cx,
+            cy,
+            width,
+            height,
             depth_scale: 1.0 / 1000.0, // Default: 1mm per unit
             depth_max: 10.0,           // Default: 10 meters
             depth_min: 0.1,            // Default: 10 cm
@@ -770,11 +788,7 @@ impl ProjectionModel {
     /// assert_eq!(k_matrix[(1, 1)], 525.0);
     /// ```
     pub fn projection_matrix(&self) -> Matrix3<f64> {
-        Matrix3::new(
-            self.fx, 0.0,     self.cx,
-            0.0,     self.fy, self.cy,
-            0.0,     0.0,     1.0,
-        )
+        Matrix3::new(self.fx, 0.0, self.cx, 0.0, self.fy, self.cy, 0.0, 0.0, 1.0)
     }
 
     /// Checks if a depth value is valid according to the sensor parameters.
@@ -860,41 +874,33 @@ impl<const D: usize> WorldPointExtGeneric<D> for WorldPoint<D> {
 /// Convenience functions for seamless integration with navigation algorithms.
 pub mod navigation {
     use super::*;
-    
+
     /// Converts a path of SVectors to WorldPoints.
     pub fn svector_path_to_world_points<const D: usize>(
-        path: &[nalgebra::SVector<f32, D>]
+        path: &[nalgebra::SVector<f32, D>],
     ) -> Vec<WorldPoint<D>> {
-        path.iter()
-            .map(|svec| WorldPoint::from_svector(svec))
-            .collect()
+        path.iter().map(WorldPoint::from_svector).collect()
     }
-    
+
     /// Converts a path of WorldPoints to SVectors.
     pub fn world_points_to_svector_path<const D: usize>(
-        path: &[WorldPoint<D>]
+        path: &[WorldPoint<D>],
     ) -> Vec<nalgebra::SVector<f32, D>> {
-        path.iter()
-            .map(|point| point.to_svector())
-            .collect()
+        path.iter().map(WorldPoint::to_svector).collect()
     }
-    
+
     /// Converts a path of SVectors to GridPoints.
     pub fn svector_path_to_grid_points<const D: usize>(
-        path: &[nalgebra::SVector<usize, D>]
+        path: &[nalgebra::SVector<usize, D>],
     ) -> Vec<GridPoint<D>> {
-        path.iter()
-            .map(|svec| GridPoint::from_svector(svec))
-            .collect()
+        path.iter().map(GridPoint::from_svector).collect()
     }
-    
+
     /// Converts a path of GridPoints to SVectors.
     pub fn grid_points_to_svector_path<const D: usize>(
-        path: &[GridPoint<D>]
+        path: &[GridPoint<D>],
     ) -> Vec<nalgebra::SVector<usize, D>> {
-        path.iter()
-            .map(|point| point.to_svector())
-            .collect()
+        path.iter().map(GridPoint::to_svector).collect()
     }
 }
 
@@ -914,7 +920,7 @@ mod tests {
     fn test_body_projection() {
         let projection = ProjectionModel::new(500.0, 500.0, 320.0, 240.0, 640, 480);
         let body_point: BodyPoint = Point3::new(0.1, 0.2, 1.0);
-        
+
         let projected = body_point.project(&projection).unwrap();
         assert!((projected.x - 370.0).abs() < 1e-10);
         assert!((projected.y - 340.0).abs() < 1e-10);
@@ -924,10 +930,10 @@ mod tests {
     fn test_pose_composition() {
         let pose1 = Pose::from_translation(Vector3::new(1.0, 0.0, 0.0));
         let pose2 = Pose::from_translation(Vector3::new(0.0, 1.0, 0.0));
-        
+
         let composed = pose1.compose(&pose2);
         let expected_translation = Vector3::new(1.0, 1.0, 0.0);
-        
+
         assert!((composed.translation() - expected_translation).norm() < 1e-10);
     }
 
@@ -935,40 +941,40 @@ mod tests {
     fn test_world_to_body_transform() {
         let world_point: WorldPoint3D = Point3::new(1.0, 2.0, 3.0);
         let pose = Pose::from_translation(Vector3::new(0.5, 0.5, 0.5));
-        
+
         let body_point = world_point.to_body(&pose);
         let back_to_world = body_point.to_world(&pose);
-        
+
         assert!((world_point - back_to_world).norm() < 1e-10);
     }
 
     #[test]
     fn test_pose_exp_log_roundtrip() {
         use nalgebra::Vector6;
-        
+
         // Test with a non-trivial tangent vector
         let tangent = Vector6::new(0.1, 0.2, 0.3, 1.0, 2.0, 3.0);
         let pose = Pose::exp(&tangent);
         let recovered = pose.log();
-        
-        assert!((tangent - recovered).norm() < 1e-10, 
-                "Exp-log roundtrip failed: original={:?}, recovered={:?}", tangent, recovered);
+
+        assert!(
+            (tangent - recovered).norm() < 1e-10,
+            "Exp-log roundtrip failed: original={:?}, recovered={:?}",
+            tangent,
+            recovered
+        );
     }
 
     #[test]
     fn test_pose_log_exp_roundtrip() {
         // Test with a non-trivial pose
-        let rotation = Matrix3::new(
-            0.866, -0.5, 0.0,
-            0.5, 0.866, 0.0,
-            0.0, 0.0, 1.0
-        );
+        let rotation = Matrix3::new(0.866, -0.5, 0.0, 0.5, 0.866, 0.0, 0.0, 0.0, 1.0);
         let translation = Vector3::new(1.0, 2.0, 3.0);
         let pose = Pose::from_matrix_translation(rotation, translation);
-        
+
         let tangent = pose.log();
         let recovered = Pose::exp(&tangent);
-        
+
         assert!((pose.translation() - recovered.translation()).norm() < 1e-10);
         assert!((pose.rotation() - recovered.rotation()).norm() < 1e-10);
     }
@@ -977,14 +983,14 @@ mod tests {
     fn test_pose_interpolation() {
         let pose1 = Pose::from_translation(Vector3::new(0.0, 0.0, 0.0));
         let pose2 = Pose::from_translation(Vector3::new(2.0, 4.0, 6.0));
-        
+
         // Test endpoints
         let start = pose1.interpolate(&pose2, 0.0);
         let end = pose1.interpolate(&pose2, 1.0);
-        
+
         assert!((start.translation() - pose1.translation()).norm() < 1e-10);
         assert!((end.translation() - pose2.translation()).norm() < 1e-10);
-        
+
         // Test midpoint
         let midpoint = pose1.interpolate(&pose2, 0.5);
         let expected_translation = Vector3::new(1.0, 2.0, 3.0);
@@ -995,14 +1001,14 @@ mod tests {
     fn test_pose_lie_interpolation() {
         let pose1 = Pose::identity();
         let pose2 = Pose::from_translation(Vector3::new(1.0, 1.0, 1.0));
-        
+
         // Test endpoints
         let start = pose1.interpolate_lie(&pose2, 0.0);
         let end = pose1.interpolate_lie(&pose2, 1.0);
-        
+
         assert!((start.translation() - pose1.translation()).norm() < 1e-10);
         assert!((end.translation() - pose2.translation()).norm() < 1e-10);
-        
+
         // Test that interpolation produces reasonable intermediate values
         let quarter = pose1.interpolate_lie(&pose2, 0.25);
         let expected_quarter = Vector3::new(0.25, 0.25, 0.25);
@@ -1012,14 +1018,16 @@ mod tests {
     #[test]
     fn test_small_angle_approximation() {
         use nalgebra::Vector6;
-        
+
         // Test with very small rotation
         let small_tangent = Vector6::new(1e-8, 2e-8, 3e-8, 0.1, 0.2, 0.3);
         let pose = Pose::exp(&small_tangent);
         let recovered = pose.log();
-        
-        assert!((small_tangent - recovered).norm() < 1e-12,
-                "Small angle approximation failed");
+
+        assert!(
+            (small_tangent - recovered).norm() < 1e-12,
+            "Small angle approximation failed"
+        );
     }
 
     #[test]
@@ -1049,21 +1057,21 @@ mod tests {
     #[test]
     fn test_coordinate_conversion() {
         use nalgebra::SVector;
-        
+
         // Test WorldPoint conversion
         let world_2d: WorldPoint<2> = Point2::new(1.5, 2.5);
         let svector_2d = world_2d.to_svector();
         assert_eq!(svector_2d, SVector::<f32, 2>::new(1.5, 2.5));
-        
+
         let world_back = WorldPoint::<2>::from_svector(&svector_2d);
         assert_eq!(world_back.x, 1.5);
         assert_eq!(world_back.y, 2.5);
-        
+
         // Test GridPoint conversion
         let grid_3d: GridPoint<3> = Point3::new(10, 20, 30);
         let svector_3d = grid_3d.to_svector();
         assert_eq!(svector_3d, SVector::<usize, 3>::new(10, 20, 30));
-        
+
         let grid_back = GridPoint::<3>::from_svector(&svector_3d);
         assert_eq!(grid_back.x, 10);
         assert_eq!(grid_back.y, 20);
@@ -1072,20 +1080,20 @@ mod tests {
 
     #[test]
     fn test_navigation_helpers() {
-        use nalgebra::SVector;
         use crate::navigation::*;
-        
+        use nalgebra::SVector;
+
         // Test world point path conversion
         let world_path = vec![
             WorldPoint::<2>::from([1.0, 2.0]),
             WorldPoint::<2>::from([3.0, 4.0]),
         ];
-        
+
         let svector_path = world_points_to_svector_path(&world_path);
         assert_eq!(svector_path.len(), 2);
         assert_eq!(svector_path[0], SVector::<f32, 2>::new(1.0, 2.0));
         assert_eq!(svector_path[1], SVector::<f32, 2>::new(3.0, 4.0));
-        
+
         let world_path_back = svector_path_to_world_points(&svector_path);
         assert_eq!(world_path_back.len(), 2);
         assert_eq!(world_path_back[0].x, 1.0);

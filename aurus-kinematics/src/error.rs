@@ -33,4 +33,3 @@ impl core::fmt::Display for KinematicsError {
 
 #[cfg(feature = "std")]
 impl std::error::Error for KinematicsError {}
-

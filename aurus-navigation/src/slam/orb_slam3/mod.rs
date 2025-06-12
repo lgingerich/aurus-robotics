@@ -1,7 +1,6 @@
 use opencv::{Result, calib3d, core, features2d, imgcodecs, imgproc, prelude::*};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
 
 // Minimal SLAM data structures
 #[derive(Debug, Clone)]
@@ -26,6 +25,12 @@ pub struct SimpleMap {
     pub map_points: HashMap<u32, MapPoint>,
     pub next_kf_id: u32,
     pub next_mp_id: u32,
+}
+
+impl Default for SimpleMap {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SimpleMap {
@@ -163,12 +168,12 @@ pub fn run() -> Result<()> {
                 // Match features with previous frame
                 let matches = match_features(&prev_keyframe.descriptors, &descriptors)?;
                 total_matches += matches.len();
-                println!("🔗 Found {} matches", matches.len());
+                println!("Found {} matches", matches.len());
 
                 if matches.len() >= 8 {
                     // Estimate pose using PnP with existing map points
                     match estimate_pose_pnp(
-                        &prev_keyframe,
+                        prev_keyframe,
                         &keypoints,
                         &matches,
                         &slam_map,
@@ -472,7 +477,7 @@ fn create_trajectory_visualization(trajectory: &[(f64, f64, f64)]) -> Result<cor
 
 fn create_final_visualization(
     slam_map: &SimpleMap,
-    keypoints: &core::Vector<core::KeyPoint>,
+    _keypoints: &core::Vector<core::KeyPoint>,
 ) -> Result<core::Mat> {
     let mut canvas = core::Mat::zeros(600, 800, core::CV_8UC3)?.to_mat()?;
 
@@ -481,7 +486,7 @@ fn create_final_visualization(
         let x = ((map_point.position.x + 5.0) * 50.0 + 100.0) as i32; // Scale and offset
         let z = ((map_point.position.z + 5.0) * 50.0 + 100.0) as i32;
 
-        if x >= 0 && x < 800 && z >= 0 && z < 600 {
+        if (0..800).contains(&x) && (0..600).contains(&z) {
             imgproc::circle(
                 &mut canvas,
                 core::Point::new(x, z),
@@ -674,7 +679,7 @@ fn should_add_keyframe(current_pose: &core::Mat, last_pose: &core::Mat) -> Resul
     Ok(translation_distance > 0.1) // 10cm threshold
 }
 
-fn visualize_features(
+fn _visualize_features(
     image: &core::Mat,
     keypoints: &core::Vector<core::KeyPoint>,
 ) -> Result<core::Mat> {

@@ -1,5 +1,5 @@
-use aurus_navigation::map::costmap::{CellCost, CostMap};
 use aurus_common::{GridPoint, WorldPoint};
+use aurus_navigation::map::costmap::{CellCost, CostMap};
 use nalgebra::SVector;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -53,13 +53,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dims = costmap.get_dims();
     let origin = costmap.get_origin();
     let resolution = costmap.get_resolution();
-    
+
     let min_p = *origin;
     let mut max_p = SVector::<f32, 2>::zeros();
     for i in 0..2 {
         max_p[i] = origin[i] + (dims[i] as f32) * resolution[i];
     }
-    
+
     println!("\nMap bounds:");
     println!("Min: ({:.2}, {:.2})", min_p[0], min_p[1]);
     println!("Max: ({:.2}, {:.2})", max_p[0], max_p[1]);
@@ -119,7 +119,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Let's check a position in the inflated area
     let inflated_world_pos_tuple = (0.2, 0.1); // This should be in the inflated area
-    let inflated_world_p = SVector::<f32, 2>::new(inflated_world_pos_tuple.0, inflated_world_pos_tuple.1);
+    let inflated_world_p =
+        SVector::<f32, 2>::new(inflated_world_pos_tuple.0, inflated_world_pos_tuple.1);
     if let Some(grid_p) = costmap.world_to_grid(&inflated_world_p) {
         println!(
             "Cost at world position {:?} (grid: {}, {}): {:?}",

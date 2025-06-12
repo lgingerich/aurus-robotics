@@ -19,11 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Random starting position
         let start_x = rng.random_range(0..dims[0]);
         let start_y = rng.random_range(0..dims[1]);
-        
+
         // Random obstacle size
         let width = rng.random_range(1..=max_obstacle_size);
         let height = rng.random_range(1..=max_obstacle_size);
-        
+
         // Create obstacle
         for x in start_x..std::cmp::min(start_x + width, dims[0]) {
             for y in start_y..std::cmp::min(start_y + height, dims[1]) {
@@ -72,13 +72,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dims = costmap.get_dims();
     let origin = costmap.get_origin();
     let resolution = costmap.get_resolution();
-    
+
     let min_p = *origin;
     let mut max_p = SVector::<f32, 2>::zeros();
     for i in 0..2 {
         max_p[i] = origin[i] + (dims[i] as f32) * resolution[i];
     }
-    
+
     println!("\nMap bounds:");
     println!("Min world coordinates: ({:.2}, {:.2})", min_p[0], min_p[1]);
     println!("Max world coordinates: ({:.2}, {:.2})", max_p[0], max_p[1]);
@@ -122,7 +122,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn print_costmap(costmap: &CostMap<2>) {
     let dims = costmap.get_dims();
-    
+
     // Print from top to bottom (reverse y order for visual clarity)
     for y in (0..dims[1]).rev() {
         print!("{:2} ", y);
@@ -139,7 +139,7 @@ fn print_costmap(costmap: &CostMap<2>) {
         }
         println!();
     }
-    
+
     // Print x-axis labels
     print!("   ");
     for x in 0..dims[0] {

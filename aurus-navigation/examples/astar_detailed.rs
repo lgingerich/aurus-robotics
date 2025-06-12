@@ -1,8 +1,8 @@
-use aurus_navigation::astar::astar_search_grid_detailed;
+use aurus_common::GridPoint;
 #[cfg(feature = "serde")]
 use aurus_navigation::astar::PathResult;
-use aurus_navigation::map::costmap::{CostMap, CellCost};
-use aurus_common::GridPoint;
+use aurus_navigation::astar::astar_search_grid_detailed;
+use aurus_navigation::map::costmap::{CellCost, CostMap};
 use nalgebra::SVector;
 
 #[cfg(feature = "serde")]
@@ -20,13 +20,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add some obstacles to make pathfinding interesting
     println!("\nSetting up obstacles...");
-    
+
     // Create a wall
     for y in 2..6 {
         let coords = SVector::<usize, 2>::new(3, y);
         costmap.set_cost(&coords, CellCost::Lethal)?;
     }
-    
+
     // Add some inflated cost areas
     for x in 1..3 {
         for y in 1..3 {
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Define start and goal
     let start = GridPoint::<2>::from([0, 0]);
     let goal = GridPoint::<2>::from([7, 7]);
-    
+
     println!("\nStart: {:?}", start);
     println!("Goal: {:?}", goal);
 
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (i, point) in path.iter().enumerate() {
                 println!("  {}: {:?}", i, point);
             }
-            
+
             println!("\nPath visualization:");
             print_path_on_costmap(&costmap, path);
         }
@@ -73,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(json) => {
                     println!("PathResult as JSON:");
                     println!("{}", json);
-                    
+
                     // Test deserialization
                     match serde_json::from_str::<PathResult<GridPoint<2>, 2>>(&json) {
                         Ok(deserialized) => {
@@ -99,15 +99,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test a blocked scenario
     println!("\n{}", "=".repeat(50));
     println!("Testing blocked scenario...");
-    
+
     let mut blocked_costmap = CostMap::<2>::new(dims, resolution, origin)?;
-    
+
     // Block entire middle column
     for y in 0..8 {
         let coords = SVector::<usize, 2>::new(3, y);
         blocked_costmap.set_cost(&coords, CellCost::Lethal)?;
     }
-    
+
     let blocked_result = astar_search_grid_detailed(&blocked_costmap, start, goal);
     println!("Blocked scenario result: {}", blocked_result);
 
@@ -141,11 +141,10 @@ fn print_costmap(costmap: &CostMap<2>) {
 
 fn print_path_on_costmap(costmap: &CostMap<2>, path: &[GridPoint<2>]) {
     use std::collections::HashSet;
-    
-    let path_set: HashSet<(usize, usize)> = path.iter()
-        .map(|p| (p.coords[0], p.coords[1]))
-        .collect();
-    
+
+    let path_set: HashSet<(usize, usize)> =
+        path.iter().map(|p| (p.coords[0], p.coords[1])).collect();
+
     println!("Legend: . = Free, X = Lethal, I = Inflated, * = Path, S = Start, G = Goal");
     let dims = costmap.get_dims();
     for y in (0..dims[1]).rev() {
@@ -153,10 +152,15 @@ fn print_path_on_costmap(costmap: &CostMap<2>, path: &[GridPoint<2>]) {
         for x in 0..dims[0] {
             let coords = SVector::<usize, 2>::new(x, y);
             let pos = (x, y);
-            
+
             if pos == (path[0].coords[0], path[0].coords[1]) {
                 print!("S ");
-            } else if pos == (path.last().unwrap().coords[0], path.last().unwrap().coords[1]) {
+            } else if pos
+                == (
+                    path.last().unwrap().coords[0],
+                    path.last().unwrap().coords[1],
+                )
+            {
                 print!("G ");
             } else if path_set.contains(&pos) {
                 print!("* ");
@@ -178,4 +182,4 @@ fn print_path_on_costmap(costmap: &CostMap<2>, path: &[GridPoint<2>]) {
         print!("{} ", x);
     }
     println!();
-} 
+}

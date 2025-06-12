@@ -357,7 +357,7 @@ pub fn astar_search_grid_detailed<const D: usize>(
 
     match result.path {
         Some(path) => {
-            let grid_path = path.iter().map(|p| svector_to_grid_point(p)).collect();
+            let grid_path = path.iter().map(svector_to_grid_point).collect();
             PathResult::success(
                 grid_path,
                 result.total_cost.unwrap_or(0),

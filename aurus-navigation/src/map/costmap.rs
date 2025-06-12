@@ -379,7 +379,7 @@ impl<const D: usize> CostMap<D> {
                 // Calculate inflation cost based on distance
                 let inflation_factor = 1.0 - (distance / radius);
                 let raw_inflation_cost = inflation_factor * 252.0;
-                let inflation_u8 = raw_inflation_cost.max(1.0).min(252.0) as u8;
+                let inflation_u8 = raw_inflation_cost.clamp(1.0, 252.0) as u8;
 
                 let idx = self.get_index(&neighbor_coords);
 
