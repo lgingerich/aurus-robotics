@@ -1,10 +1,14 @@
 #![warn(missing_docs)]
 
-/// Error type for kinematics operations.
-///
-/// This enum encapsulates all possible errors that can occur during
-/// kinematic calculations, such as invalid parameters or time deltas.
-#[derive(Debug, PartialEq)]
+//! Error types for the kinematics library.
+//!
+//! This module defines error types that can occur during kinematic calculations
+//! and transformations.
+
+use core::fmt;
+
+/// Errors that can occur in kinematic calculations.
+#[derive(Debug, Clone, PartialEq)]
 pub enum KinematicsError {
     /// Error for invalid wheel radius.
     /// This variant is returned when a wheel radius is provided that is not positive.
@@ -18,7 +22,7 @@ pub enum KinematicsError {
 }
 
 impl core::fmt::Display for KinematicsError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             KinematicsError::InvalidWheelRadius(msg) => write!(f, "Invalid wheel radius: {}", msg),
             KinematicsError::InvalidAxleLength(msg) => write!(f, "Invalid axle length: {}", msg),
@@ -27,4 +31,5 @@ impl core::fmt::Display for KinematicsError {
     }
 }
 
-impl core::error::Error for KinematicsError {}
+#[cfg(feature = "std")]
+impl std::error::Error for KinematicsError {}

@@ -1,4 +1,9 @@
-#![cfg_attr(not(test), no_std)]
+//! Kinematics library for robotics applications.
+//!
+//! This crate provides kinematic models and calculations for various robot types,
+//! including differential drive robots and other common robotic platforms.
+
+#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 #![warn(missing_docs)]
 
 use core::f64::consts::PI;
@@ -61,7 +66,11 @@ impl Pose {
 
 impl fmt::Display for Pose {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(x: {:.2}, y: {:.2}, θ: {:.2} rad)", self.x, self.y, self.theta)
+        write!(
+            f,
+            "(x: {:.2}, y: {:.2}, θ: {:.2} rad)",
+            self.x, self.y, self.theta
+        )
     }
 }
 
@@ -118,7 +127,11 @@ impl WheelSpeeds {
 
 impl fmt::Display for WheelSpeeds {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(ωL: {:.2} rad/s, ωR: {:.2} rad/s)", self.omega_l, self.omega_r)
+        write!(
+            f,
+            "(ωL: {:.2} rad/s, ωR: {:.2} rad/s)",
+            self.omega_l, self.omega_r
+        )
     }
 }
 
@@ -178,14 +191,10 @@ impl DifferentialDrive {
     /// Returns `Err(KinematicsError::InvalidAxleLength)` if `axle_length` is not positive.
     pub const fn new(wheel_radius: f64, axle_length: f64) -> Result<Self, KinematicsError> {
         if wheel_radius <= 0.0 {
-            return Err(KinematicsError::InvalidWheelRadius(
-                "must be positive",
-            ));
+            return Err(KinematicsError::InvalidWheelRadius("must be positive"));
         }
         if axle_length <= 0.0 {
-            return Err(KinematicsError::InvalidAxleLength(
-                "must be positive",
-            ));
+            return Err(KinematicsError::InvalidAxleLength("must be positive"));
         }
         Ok(DifferentialDrive {
             wheel_radius,
@@ -269,9 +278,7 @@ impl DifferentialDrive {
         dt: f64,
     ) -> Result<Pose, KinematicsError> {
         if dt < 0.0 {
-            return Err(KinematicsError::NegativeTimeDelta(
-                "must be non-negative",
-            ));
+            return Err(KinematicsError::NegativeTimeDelta("must be non-negative"));
         }
 
         let delta_x = chassis_speeds.v * cos(current_pose.theta) * dt;
@@ -316,7 +323,11 @@ impl DifferentialDrive {
 
 impl fmt::Display for DifferentialDrive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DifferentialDrive (r: {:.2} m, L: {:.2} m)", self.wheel_radius, self.axle_length)
+        write!(
+            f,
+            "DifferentialDrive (r: {:.2} m, L: {:.2} m)",
+            self.wheel_radius, self.axle_length
+        )
     }
 }
 
@@ -343,25 +354,37 @@ mod tests {
         assert_eq!(kinematics.wheel_radius, 0.1);
         assert_eq!(kinematics.axle_length, 0.5);
         assert_eq!(kinematics.wheel_radius(), 0.1); // Test getter
-        assert_eq!(kinematics.axle_length(), 0.5);  // Test getter
+        assert_eq!(kinematics.axle_length(), 0.5); // Test getter
     }
 
     #[test]
     // #[should_panic] // No longer panics, returns Err
     fn test_constructor_invalid_radius() {
         let result = DifferentialDrive::new(0.0, 0.5);
-        assert!(matches!(result, Err(KinematicsError::InvalidWheelRadius("must be positive"))));
+        assert!(matches!(
+            result,
+            Err(KinematicsError::InvalidWheelRadius("must be positive"))
+        ));
         let result_negative = DifferentialDrive::new(-0.1, 0.5);
-        assert!(matches!(result_negative, Err(KinematicsError::InvalidWheelRadius("must be positive"))));
+        assert!(matches!(
+            result_negative,
+            Err(KinematicsError::InvalidWheelRadius("must be positive"))
+        ));
     }
 
     #[test]
     // #[should_panic] // No longer panics, returns Err
     fn test_constructor_invalid_axle_length() {
         let result = DifferentialDrive::new(0.1, 0.0);
-        assert!(matches!(result, Err(KinematicsError::InvalidAxleLength("must be positive"))));
+        assert!(matches!(
+            result,
+            Err(KinematicsError::InvalidAxleLength("must be positive"))
+        ));
         let result_negative = DifferentialDrive::new(0.1, -0.5);
-        assert!(matches!(result_negative, Err(KinematicsError::InvalidAxleLength("must be positive"))));
+        assert!(matches!(
+            result_negative,
+            Err(KinematicsError::InvalidAxleLength("must be positive"))
+        ));
     }
 
     #[test]
@@ -452,7 +475,9 @@ mod tests {
         // Expected: x = 0 + 1*cos(0)*1 = 1
         //           y = 0 + 1*sin(0)*1 = 0
         //           theta = 0 + 0*1 = 0
-        let new_pose = kinematics.update_pose(current_pose, chassis_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose(current_pose, chassis_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - 1.0).abs() < EPSILON);
         assert!((new_pose.y - 0.0).abs() < EPSILON);
         assert!((new_pose.theta - 0.0).abs() < EPSILON);
@@ -468,7 +493,9 @@ mod tests {
         // Expected: x = 1 + 1*cos(PI/2)*2 = 1 + 0 = 1
         //           y = 1 + 1*sin(PI/2)*2 = 1 + 2 = 3
         //           theta = PI/2 + 0*2 = PI/2
-        let new_pose = kinematics.update_pose(current_pose, chassis_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose(current_pose, chassis_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - 1.0).abs() < EPSILON);
         assert!((new_pose.y - 3.0).abs() < EPSILON);
         assert!((new_pose.theta - PI / 2.0).abs() < EPSILON);
@@ -484,7 +511,9 @@ mod tests {
         // Expected: x = 0 + 1*cos(PI)*1 = 0 - 1 = -1
         //           y = 0 + 1*sin(PI)*1 = 0 + 0 = 0
         //           theta = PI + 0*1 = PI (normalized to -PI)
-        let new_pose = kinematics.update_pose(current_pose, chassis_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose(current_pose, chassis_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - (-1.0)).abs() < EPSILON);
         assert!((new_pose.y - 0.0).abs() < EPSILON);
         assert!((new_pose.theta - (-PI)).abs() < EPSILON); // PI normalizes to -PI
@@ -500,7 +529,9 @@ mod tests {
         // Expected: x = 0 + 1*cos(-PI/2)*1 = 0 + 0 = 0
         //           y = 0 + 1*sin(-PI/2)*1 = 0 - 1 = -1
         //           theta = -PI/2 + 0*1 = -PI/2
-        let new_pose = kinematics.update_pose(current_pose, chassis_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose(current_pose, chassis_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - 0.0).abs() < EPSILON);
         assert!((new_pose.y - (-1.0)).abs() < EPSILON);
         assert!((new_pose.theta - (-PI / 2.0)).abs() < EPSILON);
@@ -516,7 +547,9 @@ mod tests {
         // Expected: x = 0 + 0*cos(0)*1 = 0
         //           y = 0 + 0*sin(0)*1 = 0
         //           theta = 0 + (PI/2)*1 = PI/2
-        let new_pose = kinematics.update_pose(current_pose, chassis_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose(current_pose, chassis_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - 0.0).abs() < EPSILON);
         assert!((new_pose.y - 0.0).abs() < EPSILON);
         assert!((new_pose.theta - PI / 2.0).abs() < EPSILON);
@@ -537,7 +570,9 @@ mod tests {
         // x_new = 1.0 + 0.35355 = 1.35355
         // y_new = 2.0 + 0.35355 = 2.35355
         // theta_new = PI/4 + PI/4 = PI/2
-        let new_pose = kinematics.update_pose(current_pose, chassis_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose(current_pose, chassis_speeds, dt)
+            .unwrap();
         let expected_x = 1.0 + (2.0_f64.sqrt() / 4.0);
         let expected_y = 2.0 + (2.0_f64.sqrt() / 4.0);
         let expected_theta = PI / 2.0;
@@ -554,7 +589,10 @@ mod tests {
         let current_pose = Pose::new(0.0, 0.0, 0.0);
         let chassis_speeds = ChassisSpeeds::new(1.0, 0.0);
         let result = kinematics.update_pose(current_pose, chassis_speeds, -0.1);
-        assert!(matches!(result, Err(KinematicsError::NegativeTimeDelta("must be non-negative"))));
+        assert!(matches!(
+            result,
+            Err(KinematicsError::NegativeTimeDelta("must be non-negative"))
+        ));
     }
 
     #[test]
@@ -564,7 +602,9 @@ mod tests {
         let wheel_speeds = WheelSpeeds::new(10.0, 10.0); // Both wheels 10 rad/s => v=1m/s, omega=0rad/s
         let dt = 1.0;
 
-        let new_pose = kinematics.update_pose_from_wheel_speeds(current_pose, wheel_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose_from_wheel_speeds(current_pose, wheel_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - 1.0).abs() < EPSILON);
         assert!((new_pose.y - 0.0).abs() < EPSILON);
         assert!((new_pose.theta - 0.0).abs() < EPSILON);
@@ -582,7 +622,9 @@ mod tests {
         let dt = 1.0; // 1 second
         // Expected theta_new = 0 + 0.4*PI*1 = 0.4*PI
 
-        let new_pose = kinematics.update_pose_from_wheel_speeds(current_pose, wheel_speeds, dt).unwrap();
+        let new_pose = kinematics
+            .update_pose_from_wheel_speeds(current_pose, wheel_speeds, dt)
+            .unwrap();
         assert!((new_pose.x - 0.0).abs() < EPSILON);
         assert!((new_pose.y - 0.0).abs() < EPSILON);
         assert!((new_pose.theta - (0.4 * PI)).abs() < EPSILON);

@@ -22,8 +22,10 @@ fn main() {
             println!("  Simulation Settings:");
             println!("    Time Step:    {} s", dt);
             println!("    Num Steps:    {}", num_steps);
-            println!("
-Simulating...");
+            println!(
+                "
+Simulating..."
+            );
 
             for i in 0..num_steps {
                 match kinematics.update_pose(current_pose, chassis_speeds, dt) {
@@ -38,13 +40,18 @@ Simulating...");
                 }
             }
 
-            println!("
-Simulation complete.");
+            println!(
+                "
+Simulation complete."
+            );
             println!("Final Pose: {:?}", current_pose);
         }
         Err(e) => {
             eprintln!("Failed to initialize kinematics: {:?}", e);
-            eprintln!("Please ensure wheel_radius ({}) and axle_length ({}) are positive.", wheel_radius, axle_length);
+            eprintln!(
+                "Please ensure wheel_radius ({}) and axle_length ({}) are positive.",
+                wheel_radius, axle_length
+            );
         }
     }
 }
