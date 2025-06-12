@@ -66,20 +66,4 @@ fn main() {
     for (i, point) in world_path_back.iter().enumerate() {
         println!("  Point {}: ({}, {})", i, point.x, point.y);
     }
-
-    // Demonstrate how this would work with costmap dimensions
-    println!("\n=== Integration with Navigation Algorithms ===");
-    println!("This system allows seamless integration with:");
-    println!("- CostMap<D> for any dimension D");
-    println!("- A* pathfinding algorithms that work with SVector<T, D>");
-    println!("- Automatic conversion between WorldPoint<D>, GridPoint<D>, and SVector<T, D>");
-    println!("- Type-safe operations that preserve dimensionality");
-    
-    println!("\nExample workflow:");
-    println!("1. Define world coordinates as WorldPoint<D>");
-    println!("2. Convert to SVector for costmap operations");
-    println!("3. Run A* pathfinding with SVector coordinates");
-    println!("4. Convert result back to WorldPoint<D> for application use");
-    
-    println!("\nAll conversions are zero-cost and maintain type safety!");
 } 
