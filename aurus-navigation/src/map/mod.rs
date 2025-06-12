@@ -1,4 +1,8 @@
-pub mod costmap;
-pub mod point_types;
+//! Map-related functionality for navigation.
+//!
+//! This module provides costmap implementations and related utilities
+//! for representing and working with occupancy grids and cost maps.
 
-pub use point_types::{GridPoint, WorldPoint};
+pub mod costmap;
+
+pub use costmap::{CostMap, CostMap2D, CostMap3D};

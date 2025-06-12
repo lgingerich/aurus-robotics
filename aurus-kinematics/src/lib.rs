@@ -1,4 +1,9 @@
-#![cfg_attr(not(test), no_std)]
+//! Kinematics library for robotics applications.
+//!
+//! This crate provides kinematic models and calculations for various robot types,
+//! including differential drive robots and other common robotic platforms.
+
+#![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 #![warn(missing_docs)]
 
 use core::f64::consts::PI;

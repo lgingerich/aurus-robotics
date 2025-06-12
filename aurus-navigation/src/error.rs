@@ -28,7 +28,9 @@ impl core::fmt::Display for NavigationError {
             NavigationError::InvalidResolution(msg) => write!(f, "Invalid map resolution: {}", msg),
             NavigationError::InvalidDimensions(msg) => write!(f, "Invalid map dimensions: {}", msg),
             NavigationError::OutOfBounds(msg) => write!(f, "Map access out of bounds: {}", msg),
-            NavigationError::InvalidWorldCoordinates(msg) => write!(f, "Invalid world coordinates: {}", msg),
+            NavigationError::InvalidWorldCoordinates(msg) => {
+                write!(f, "Invalid world coordinates: {}", msg)
+            }
         }
     }
 }

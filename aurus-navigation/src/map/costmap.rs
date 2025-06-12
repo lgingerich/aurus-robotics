@@ -1,3 +1,10 @@
+//! Cost map implementation for navigation and path planning.
+//!
+//! This module provides a generic n-dimensional cost map structure that can be used
+//! for representing occupancy grids, obstacle maps, and cost fields for path planning
+//! algorithms. The cost map supports various cell types including free space, obstacles,
+//! inflated costs, and unknown areas.
+
 #![warn(missing_docs)]
 
 // NOTES / TODO:
@@ -81,28 +88,40 @@ pub struct CostMap<const D: usize> {
 
 impl<const D: usize> CostMap<D> {
     /// Creates a new n-dimensional CostMap with the specified dimensions and resolution.
-    /// 
+    ///
     /// # Arguments
     /// * `dims` - Size in cells along each axis
     /// * `resolution` - Resolution (world meters per cell) along each axis
     /// * `origin` - Origin of cell (0, 0, …) in world coordinates
-    /// 
+    ///
     /// # Returns
     /// * `Result<Self, NavigationError>` - The created CostMap or an error if parameters are invalid
-    pub fn new(dims: SVector<usize, D>, resolution: SVector<f32, D>, origin: SVector<f32, D>) -> Result<Self, NavigationError> {
+    pub fn new(
+        dims: SVector<usize, D>,
+        resolution: SVector<f32, D>,
+        origin: SVector<f32, D>,
+    ) -> Result<Self, NavigationError> {
         // Validate dimensions
         for i in 0..D {
             if dims[i] == 0 {
-                return Err(NavigationError::InvalidDimensions("All dimensions must be non-zero"));
+                return Err(NavigationError::InvalidDimensions(
+                    "All dimensions must be non-zero",
+                ));
             }
             if resolution[i] <= 0.0 {
-                return Err(NavigationError::InvalidResolution("All resolutions must be positive"));
+                return Err(NavigationError::InvalidResolution(
+                    "All resolutions must be positive",
+                ));
             }
         }
 
         // Check for potential overflow in data allocation
-        let total_cells = dims.iter().try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
-            .ok_or(NavigationError::InvalidDimensions("Map dimensions too large, would cause overflow"))?;
+        let total_cells = dims
+            .iter()
+            .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
+            .ok_or(NavigationError::InvalidDimensions(
+                "Map dimensions too large, would cause overflow",
+            ))?;
 
         Ok(CostMap {
             dims,
@@ -131,12 +150,12 @@ impl<const D: usize> CostMap<D> {
     fn get_index(&self, coords: &SVector<usize, D>) -> usize {
         let mut index = 0;
         let mut stride = 1;
-        
+
         for i in 0..D {
             index += coords[i] * stride;
             stride *= self.dims[i];
         }
-        
+
         index
     }
 
@@ -144,21 +163,21 @@ impl<const D: usize> CostMap<D> {
     /// Returns None if the world coordinates are outside the map bounds.
     pub fn world_to_grid(&self, world_coords: &SVector<f32, D>) -> Option<SVector<usize, D>> {
         let mut grid_coords = SVector::<usize, D>::zeros();
-        
+
         for i in 0..D {
             let grid_f = (world_coords[i] - self.origin[i]) / self.resolution[i];
-            
+
             if grid_f < 0.0 || grid_f >= self.dims[i] as f32 {
                 return None;
             }
-            
+
             grid_coords[i] = grid_f.floor() as usize;
-            
+
             if grid_coords[i] >= self.dims[i] {
                 return None;
             }
         }
-        
+
         Some(grid_coords)
     }
 
@@ -170,12 +189,12 @@ impl<const D: usize> CostMap<D> {
                 return None;
             }
         }
-        
+
         let mut world_coords = SVector::<f32, D>::zeros();
         for i in 0..D {
             world_coords[i] = self.origin[i] + (grid_coords[i] as f32 + 0.5) * self.resolution[i];
         }
-        
+
         Some(world_coords)
     }
 
@@ -184,43 +203,62 @@ impl<const D: usize> CostMap<D> {
         // Check bounds
         for i in 0..D {
             if grid_coords[i] >= self.dims[i] {
-                return Err(NavigationError::OutOfBounds("Grid coordinates out of bounds"));
+                return Err(NavigationError::OutOfBounds(
+                    "Grid coordinates out of bounds",
+                ));
             }
         }
-        
+
         let index = self.get_index(grid_coords);
         Ok(&self.data[index])
     }
 
     /// Sets the cost at grid coordinates.
-    pub fn set_cost(&mut self, grid_coords: &SVector<usize, D>, cost: CellCost) -> Result<(), NavigationError> {
+    pub fn set_cost(
+        &mut self,
+        grid_coords: &SVector<usize, D>,
+        cost: CellCost,
+    ) -> Result<(), NavigationError> {
         // Check bounds
         for i in 0..D {
             if grid_coords[i] >= self.dims[i] {
-                return Err(NavigationError::OutOfBounds("Grid coordinates out of bounds"));
+                return Err(NavigationError::OutOfBounds(
+                    "Grid coordinates out of bounds",
+                ));
             }
         }
-        
+
         let index = self.get_index(grid_coords);
         self.data[index] = cost;
         Ok(())
     }
 
     /// Gets the cost at world coordinates.
-    pub fn get_cost_at_world(&self, world_coords: &SVector<f32, D>) -> Result<&CellCost, NavigationError> {
+    pub fn get_cost_at_world(
+        &self,
+        world_coords: &SVector<f32, D>,
+    ) -> Result<&CellCost, NavigationError> {
         if let Some(grid_coords) = self.world_to_grid(world_coords) {
             self.get_cost(&grid_coords)
         } else {
-            Err(NavigationError::InvalidWorldCoordinates("World coordinates outside map bounds"))
+            Err(NavigationError::InvalidWorldCoordinates(
+                "World coordinates outside map bounds",
+            ))
         }
     }
 
     /// Sets the cost at world coordinates.
-    pub fn set_cost_at_world(&mut self, world_coords: &SVector<f32, D>, cost: CellCost) -> Result<(), NavigationError> {
+    pub fn set_cost_at_world(
+        &mut self,
+        world_coords: &SVector<f32, D>,
+        cost: CellCost,
+    ) -> Result<(), NavigationError> {
         if let Some(grid_coords) = self.world_to_grid(world_coords) {
             self.set_cost(&grid_coords, cost)
         } else {
-            Err(NavigationError::InvalidWorldCoordinates("World coordinates outside map bounds"))
+            Err(NavigationError::InvalidWorldCoordinates(
+                "World coordinates outside map bounds",
+            ))
         }
     }
 
@@ -251,22 +289,24 @@ impl<const D: usize> CostMap<D> {
 
     /// Inflates obstacles in the costmap by a specified radius.
     /// This creates a safety margin around obstacles.
-    /// 
+    ///
     /// # Arguments
     /// * `radius` - Inflation radius in meters (applied uniformly across all dimensions)
-    /// 
+    ///
     /// # Returns
     /// * `Result<(), NavigationError>` - Success or error if radius is invalid
     pub fn inflate_obstacles(&mut self, radius: f32) -> Result<(), NavigationError> {
         if radius <= 0.0 {
-            return Err(NavigationError::InvalidResolution("Inflation radius must be positive"));
+            return Err(NavigationError::InvalidResolution(
+                "Inflation radius must be positive",
+            ));
         }
 
         let mut new_data = self.data.clone();
 
         // Iterate through all cells
         let mut current_coords = SVector::<usize, D>::zeros();
-        
+
         loop {
             if let Ok(cost_val) = self.get_cost(&current_coords) {
                 if *cost_val == CellCost::Lethal {
@@ -274,13 +314,13 @@ impl<const D: usize> CostMap<D> {
                     self.inflate_around_point(&mut new_data, &current_coords, radius)?;
                 }
             }
-            
+
             // Increment coordinates (n-dimensional counter)
             if !self.increment_coords(&mut current_coords) {
                 break;
             }
         }
-        
+
         // Second pass: ensure original lethal obstacles remain lethal
         current_coords = SVector::<usize, D>::zeros();
         loop {
@@ -290,7 +330,7 @@ impl<const D: usize> CostMap<D> {
                     new_data[index] = CellCost::Lethal;
                 }
             }
-            
+
             if !self.increment_coords(&mut current_coords) {
                 break;
             }
@@ -301,7 +341,12 @@ impl<const D: usize> CostMap<D> {
     }
 
     /// Helper function to inflate around a specific point.
-    fn inflate_around_point(&self, data: &mut [CellCost], center: &SVector<usize, D>, radius: f32) -> Result<(), NavigationError> {
+    fn inflate_around_point(
+        &self,
+        data: &mut [CellCost],
+        center: &SVector<usize, D>,
+        radius: f32,
+    ) -> Result<(), NavigationError> {
         // Calculate radius in cells for each dimension
         let mut radius_cells = SVector::<usize, D>::zeros();
         for i in 0..D {
@@ -311,7 +356,7 @@ impl<const D: usize> CostMap<D> {
         // Calculate bounds for iteration
         let mut start_coords = SVector::<usize, D>::zeros();
         let mut end_coords = SVector::<usize, D>::zeros();
-        
+
         for i in 0..D {
             start_coords[i] = center[i].saturating_sub(radius_cells[i]);
             end_coords[i] = (center[i] + radius_cells[i]).min(self.dims[i] - 1);
@@ -319,7 +364,7 @@ impl<const D: usize> CostMap<D> {
 
         // Initialize neighbor_coords to start_coords
         let mut neighbor_coords = start_coords;
-        
+
         loop {
             // Calculate distance from center
             let mut distance_sq = 0.0f32;
@@ -327,17 +372,17 @@ impl<const D: usize> CostMap<D> {
                 let diff = (neighbor_coords[i] as f32 - center[i] as f32) * self.resolution[i];
                 distance_sq += diff * diff;
             }
-            
+
             let distance = distance_sq.sqrt();
-            
+
             if distance <= radius {
                 // Calculate inflation cost based on distance
                 let inflation_factor = 1.0 - (distance / radius);
                 let raw_inflation_cost = inflation_factor * 252.0;
                 let inflation_u8 = raw_inflation_cost.max(1.0).min(252.0) as u8;
-                
+
                 let idx = self.get_index(&neighbor_coords);
-                
+
                 // Only update if new cost is higher or current is Free
                 match data[idx] {
                     CellCost::Free => {
@@ -353,13 +398,13 @@ impl<const D: usize> CostMap<D> {
                     }
                 }
             }
-            
+
             // Increment neighbor_coords within bounds
             if !self.increment_coords_bounded(&mut neighbor_coords, &start_coords, &end_coords) {
                 break;
             }
         }
-        
+
         Ok(())
     }
 
@@ -377,7 +422,12 @@ impl<const D: usize> CostMap<D> {
     }
 
     /// Helper function to increment n-dimensional coordinates within bounds.
-    fn increment_coords_bounded(&self, coords: &mut SVector<usize, D>, start: &SVector<usize, D>, end: &SVector<usize, D>) -> bool {
+    fn increment_coords_bounded(
+        &self,
+        coords: &mut SVector<usize, D>,
+        start: &SVector<usize, D>,
+        end: &SVector<usize, D>,
+    ) -> bool {
         for i in 0..D {
             coords[i] += 1;
             if coords[i] <= end[i] {
@@ -398,10 +448,13 @@ pub type CostMap3D = CostMap<3>;
 
 impl std::fmt::Display for CostMap2D {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "CostMap2D ({}x{}, resolution: {:.3}m)", 
-                self.dims[0], self.dims[1], self.resolution[0])?;
+        writeln!(
+            f,
+            "CostMap2D ({}x{}, resolution: {:.3}m)",
+            self.dims[0], self.dims[1], self.resolution[0]
+        )?;
         writeln!(f, "Origin: ({:.3}, {:.3})", self.origin[0], self.origin[1])?;
-        
+
         // Print the costmap grid
         for y_idx in 0..self.dims[1] {
             for x_idx in 0..self.dims[0] {
@@ -418,18 +471,32 @@ impl std::fmt::Display for CostMap2D {
 
 impl std::fmt::Display for CostMap3D {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "CostMap3D ({}x{}x{}, resolution: {:.3}x{:.3}x{:.3}m)", 
-                self.dims[0], self.dims[1], self.dims[2], 
-                self.resolution[0], self.resolution[1], self.resolution[2])?;
-        writeln!(f, "Origin: ({:.3}, {:.3}, {:.3})", 
-                self.origin[0], self.origin[1], self.origin[2])?;
+        writeln!(
+            f,
+            "CostMap3D ({}x{}x{}, resolution: {:.3}x{:.3}x{:.3}m)",
+            self.dims[0],
+            self.dims[1],
+            self.dims[2],
+            self.resolution[0],
+            self.resolution[1],
+            self.resolution[2]
+        )?;
+        writeln!(
+            f,
+            "Origin: ({:.3}, {:.3}, {:.3})",
+            self.origin[0], self.origin[1], self.origin[2]
+        )?;
         writeln!(f)?;
-        
+
         // Print each Z-layer separately
         for z_idx in 0..self.dims[2] {
-            writeln!(f, "Layer Z={} (height: {:.3}m):", z_idx, 
-                    self.origin[2] + (z_idx as f32 + 0.5) * self.resolution[2])?;
-            
+            writeln!(
+                f,
+                "Layer Z={} (height: {:.3}m):",
+                z_idx,
+                self.origin[2] + (z_idx as f32 + 0.5) * self.resolution[2]
+            )?;
+
             // Print the grid for this Z-layer
             for y_idx in 0..self.dims[1] {
                 for x_idx in 0..self.dims[0] {
@@ -466,7 +533,7 @@ mod tests {
     fn test_invalid_creation() {
         let resolution = SVector::<f32, 2>::new(0.1, 0.1);
         let origin = SVector::<f32, 2>::new(0.0, 0.0);
-        
+
         assert!(matches!(
             CostMap2D::new(SVector::<usize, 2>::new(0, 10), resolution, origin),
             Err(NavigationError::InvalidDimensions(_))
@@ -476,7 +543,11 @@ mod tests {
             Err(NavigationError::InvalidDimensions(_))
         ));
         assert!(matches!(
-            CostMap2D::new(SVector::<usize, 2>::new(10, 10), SVector::<f32, 2>::new(0.0, 0.1), origin),
+            CostMap2D::new(
+                SVector::<usize, 2>::new(10, 10),
+                SVector::<f32, 2>::new(0.0, 0.1),
+                origin
+            ),
             Err(NavigationError::InvalidResolution(_))
         ));
     }
@@ -488,11 +559,11 @@ mod tests {
         let origin = SVector::<f32, 2>::new(0.0, 0.0);
         let mut costmap = CostMap2D::new(dims, resolution, origin).unwrap();
         let coords = SVector::<usize, 2>::new(2, 2);
-        
+
         // Test setting and getting costs
         costmap.set_cost(&coords, CellCost::Lethal).unwrap();
         assert_eq!(*costmap.get_cost(&coords).unwrap(), CellCost::Lethal);
-        
+
         // Test out of bounds
         let out_of_bounds_1 = SVector::<usize, 2>::new(5, 2);
         let out_of_bounds_2 = SVector::<usize, 2>::new(2, 5);
@@ -512,21 +583,29 @@ mod tests {
         let resolution = SVector::<f32, 2>::new(0.1, 0.1);
         let origin = SVector::<f32, 2>::new(-0.5, -0.5);
         let costmap = CostMap2D::new(dims, resolution, origin).unwrap();
-        
+
         // World (0.0, 0.0) should map to grid (5, 5)
         let world_coords = SVector::<f32, 2>::new(0.0, 0.0);
         let grid_coords = costmap.world_to_grid(&world_coords).unwrap();
         assert_eq!(grid_coords, SVector::<usize, 2>::new(5, 5));
-        
+
         // Grid (5, 5) should map to world center of cell (0.05, 0.05)
         let grid_coords = SVector::<usize, 2>::new(5, 5);
         let world_coords = costmap.grid_to_world(&grid_coords).unwrap();
         assert!((world_coords[0] - 0.05).abs() < 1e-6);
         assert!((world_coords[1] - 0.05).abs() < 1e-6);
-        
+
         // Test out of bounds
-        assert!(costmap.world_to_grid(&SVector::<f32, 2>::new(1.0, 1.0)).is_none());
-        assert!(costmap.grid_to_world(&SVector::<usize, 2>::new(10, 10)).is_none());
+        assert!(
+            costmap
+                .world_to_grid(&SVector::<f32, 2>::new(1.0, 1.0))
+                .is_none()
+        );
+        assert!(
+            costmap
+                .grid_to_world(&SVector::<usize, 2>::new(10, 10))
+                .is_none()
+        );
     }
 
     #[test]
@@ -537,7 +616,7 @@ mod tests {
         let mut costmap = CostMap2D::new(dims, resolution, origin).unwrap();
         let coords = SVector::<usize, 2>::new(1, 1);
         costmap.set_cost(&coords, CellCost::Lethal).unwrap();
-        
+
         let display_str = format!("{}", costmap);
         assert!(display_str.contains("CostMap2D (3x3"));
         assert!(display_str.contains("254")); // Lethal cost value
@@ -549,15 +628,17 @@ mod tests {
         let resolution = SVector::<f32, 3>::new(0.1, 0.1, 0.2);
         let origin = SVector::<f32, 3>::new(0.0, 0.0, 0.0);
         let mut costmap = CostMap3D::new(dims, resolution, origin).unwrap();
-        
+
         // Set a lethal cost in the first layer
         let coords_layer0 = SVector::<usize, 3>::new(0, 0, 0);
         costmap.set_cost(&coords_layer0, CellCost::Lethal).unwrap();
-        
+
         // Set an inflated cost in the second layer
         let coords_layer1 = SVector::<usize, 3>::new(1, 1, 1);
-        costmap.set_cost(&coords_layer1, CellCost::Inflated(100)).unwrap();
-        
+        costmap
+            .set_cost(&coords_layer1, CellCost::Inflated(100))
+            .unwrap();
+
         let display_str = format!("{}", costmap);
         assert!(display_str.contains("CostMap3D (2x2x2"));
         assert!(display_str.contains("0.100x0.100x0.200m")); // Resolution
@@ -567,4 +648,3 @@ mod tests {
         assert!(display_str.contains("100")); // Inflated cost value
     }
 }
-
