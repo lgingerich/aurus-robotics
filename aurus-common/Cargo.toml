@@ -8,3 +8,7 @@ anyhow = "1.0.98"
 nalgebra = "0.33.2"
 serde = "1.0.219"
 thiserror = "2.0.12"
+
+[[example]]
+name = "navigation_integration"
+path = "examples/navigation_integration.rs"
